@@ -1,0 +1,62 @@
+test_protocol:
+  description: Test protocol that opens Documents and sets volume to 20
+  triggers:
+  - run test protocol
+  - test workflow
+  - verify protocol engine
+  steps:
+  - tool: file_controller
+    parameters:
+      action: open
+      path: documents
+  - tool: computer_settings
+    parameters:
+      action: volume_set
+      value: 20
+fcc_claude:
+  description: Launch FCC server in admin PowerShell and FCC Claude in separate terminal
+  triggers:
+  - FCC CLAUDE
+  - fcc claude
+  - start fcc claude
+  - launch fcc claude
+  steps:
+  - tool: terminal_admin
+    parameters:
+      command: fcc-server
+    sleep_ms: 1000
+  - tool: open_terminal
+    parameters:
+      command: fcc-claude
+morning_routine:
+  description: Set volume to 50, open daily brief and fetch weather
+  triggers:
+  - morning routine
+  - start my morning
+  - good morning alfred
+  steps:
+  - tool: computer_settings
+    parameters:
+      action: volume_set
+      value: 50
+  - tool: weather_report
+    parameters:
+      action: get_weather
+  - tool: daily_brief
+    parameters:
+      action: read_briefing
+dev_mode:
+  description: Open code editor and project workspace
+  triggers:
+  - dev mode
+  - start coding
+  - development workflow
+  steps:
+  - tool: open_app
+    parameters:
+      app: code
+    sleep_ms: 500
+  - tool: file_controller
+    parameters:
+      action: open
+      path: documents
