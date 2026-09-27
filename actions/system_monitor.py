@@ -46,6 +46,14 @@ _CPU_STREAK = 3
 _nvml_lib: object = None
 _nvml_ok: object = None  # None=untested True=works False=unavailable
 
+# ── Probe caches (pynvml and WMI connections are slow to recreate) ───────────
+_pynvml_obj: object = None
+_pynvml_handle: object = None
+_pynvml_ok: object = None  # None=untested True=works False=unavailable
+
+_wmi_conn: object = None
+_wmi_ok: object = None  # None=untested True=works False=unavailable
+
 # ── Process Watchdog & Throttling Protections ────────────────────────────────
 _PROTECTED_PROCESS_NAMES = {
     # Windows core system
@@ -117,13 +125,22 @@ def _nvml_gpu() -> float:
 
 
 def _get_gpu_usage() -> float:
-    try:
-        import pynvml  # type: ignore
-        pynvml.nvmlInit()
-        h = pynvml.nvmlDeviceGetHandleByIndex(0)
-        return float(pynvml.nvmlDeviceGetUtilizationRates(h).gpu)
-    except Exception:
-        pass
+    global _pynvml_obj, _pynvml_handle, _pynvml_ok
+    if _pynvml_ok is not False:
+        try:
+            if _pynvml_handle is None:
+                import warnings
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", category=FutureWarning)
+                    import pynvml  # type: ignore
+                pynvml.nvmlInit()
+                _pynvml_obj = pynvml
+                _pynvml_handle = pynvml.nvmlDeviceGetHandleByIndex(0)
+                _pynvml_ok = True
+            return float(_pynvml_obj.nvmlDeviceGetUtilizationRates(_pynvml_handle).gpu)
+        except Exception:
+            _pynvml_ok = False
+            _pynvml_handle = None
 
     return _nvml_gpu()
 
@@ -141,15 +158,19 @@ def _get_cpu_temp() -> float:
     except Exception:
         pass
 
-    if _OS == "Windows":
+    global _wmi_conn, _wmi_ok
+    if _OS == "Windows" and _wmi_ok is not False:
         try:
-            import wmi  # type: ignore
-            w = wmi.WMI(namespace="root/wmi")
-            tz = w.MSAcpi_ThermalZoneTemperature()
+            if _wmi_conn is None:
+                import wmi  # type: ignore
+                _wmi_conn = wmi.WMI(namespace="root/wmi")
+                _wmi_ok = True
+            tz = _wmi_conn.MSAcpi_ThermalZoneTemperature()
             if tz:
                 return (tz[0].CurrentTemperature / 10.0) - 273.15
         except Exception:
-            pass
+            _wmi_ok = False
+            _wmi_conn = None
 
     return -1.0
 

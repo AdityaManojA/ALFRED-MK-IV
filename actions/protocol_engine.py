@@ -25,6 +25,8 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 import yaml
+import os
+from pathlib import Path
 
 from core.path_guard import is_heavenly_restricted, check_action_params
 from core import confirm
@@ -32,38 +34,102 @@ from core import confirm
 _RED = "\033[91m"
 _RESET = "\033[0m"
 _OS = platform.system()
-
 BASE_DIR = Path(__file__).resolve().parent.parent
-CONFIG_PATH = BASE_DIR / "config" / "protocols.yaml"
+
+
+def _get_user_name() -> str:
+    """Get the configured user name from api_keys.json."""
+    try:
+        config_path = Path(__file__).resolve().parent.parent / "config" / "api_keys.json"
+        if config_path.exists():
+            import json
+            with open(config_path, "r", encoding="utf-8") as f:
+                config = json.load(f)
+                return config.get("user_name", "").strip()
+    except Exception:
+        pass
+    return ""
+
+
+def _get_user_protocols_dir() -> Path:
+    """Get the directory for user-specific protocol files."""
+    user_name = _get_user_name()
+    if not user_name:
+        # Fallback to a default user directory if no username configured
+        user_name = "default_user"
+    # Create a safe directory name from the username
+    safe_name = "".join(c for c in user_name if c.isalnum() or c in (' ', '-', '_')).rstrip()
+    safe_name = safe_name.replace(' ', '_')
+    if not safe_name:
+        safe_name = "default_user"
+    return Path(__file__).resolve().parent.parent / "config" / "users" / safe_name
+
+
+def _get_default_protocols_path() -> Path:
+    """Get the path to the default protocols file."""
+    return Path(__file__).resolve().parent.parent / "config" / "protocols.yaml"
+
+
+def _get_user_protocols_path() -> Path:
+    """Get the path to the user-specific protocols file."""
+    return _get_user_protocols_dir() / "protocols.yaml"
+
+
+def _ensure_user_protocols_dir() -> None:
+    """Ensure the user-specific protocols directory exists."""
+    try:
+        _get_user_protocols_dir().mkdir(parents=True, exist_ok=True)
+    except Exception:
+        pass  # Ignore errors creating directory
 
 # Global cached action registry
 _ACTION_REGISTRY: Any = None
 
 
 def get_protocols_file() -> Path:
-    """Return path to config/protocols.yaml."""
-    return CONFIG_PATH
+    """Return path to user-specific protocols file."""
+    return _get_user_protocols_path()
 
 
 def load_protocols() -> Dict[str, Any]:
-    """Load macro definitions from config/protocols.yaml."""
-    cfg_file = get_protocols_file()
-    if not cfg_file.exists():
-        return {}
-    try:
-        with open(cfg_file, "r", encoding="utf-8") as f:
-            data = yaml.safe_load(f)
-            return data if isinstance(data, dict) else {}
-    except Exception as e:
-        print(f"{_RED}[error]{_RESET} Failed to load protocols from {cfg_file}: {e}")
-        return {}
+    """Load macro definitions from default protocols and merge with user-specific protocols.
+    User protocols take precedence over defaults.
+    """
+    # Start with default protocols
+    default_protocols = {}
+    default_path = _get_default_protocols_path()
+    if default_path.exists():
+        try:
+            with open(default_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                default_protocols = data if isinstance(data, dict) else {}
+        except Exception as e:
+            print(f"{_RED}[error]{_RESET} Failed to load default protocols from {default_path}: {e}")
+
+    # Load user-specific protocols
+    user_protocols = {}
+    user_path = _get_user_protocols_path()
+    if user_path.exists():
+        try:
+            with open(user_path, "r", encoding="utf-8") as f:
+                data = yaml.safe_load(f)
+                user_protocols = data if isinstance(data, dict) else {}
+        except Exception as e:
+            print(f"{_RED}[error]{_RESET} Failed to load user protocols from {user_path}: {e}")
+
+    # Merge: user protocols override defaults
+    merged = default_protocols.copy()
+    merged.update(user_protocols)
+    return merged
 
 
 def save_protocols(protocols: Dict[str, Any]) -> bool:
-    """Save macro definitions back to config/protocols.yaml."""
-    cfg_file = get_protocols_file()
+    """Save macro definitions to user-specific protocols file."""
+    cfg_file = _get_user_protocols_path()
     try:
-        cfg_file.parent.mkdir(parents=True, exist_ok=True)
+        # Ensure user directory exists
+        _ensure_user_protocols_dir()
+        # Write the protocols file
         with open(cfg_file, "w", encoding="utf-8") as f:
             yaml.safe_dump(protocols, f, default_flow_style=False, sort_keys=False)
         return True
@@ -384,7 +450,7 @@ def create_protocol(
     steps: List[Dict[str, Any]],
     triggers: Optional[List[str]] = None,
     description: str = "",
-    ask_confirmation: bool = True,
+    ask_confirmation: bool = False,
 ) -> Dict[str, Any]:
     """
     Create a new workflow playbook and save to config/protocols.yaml.
@@ -482,7 +548,7 @@ def protocol_engine_action(parameters: dict, player=None, speak=None, **kwargs) 
         steps = parameters.get("steps") or []
         triggers = parameters.get("triggers") or []
         desc = parameters.get("description") or ""
-        ask_conf = parameters.get("ask_confirmation", True)
+        ask_conf = parameters.get("ask_confirmation", False)
         res = create_protocol(name, steps, triggers=triggers, description=desc, ask_confirmation=ask_conf)
         return str(res.get("message", res.get("status")))
 
@@ -560,7 +626,7 @@ TOOL = {
             },
             "ask_confirmation": {
                 "type": "BOOLEAN",
-                "description": "Whether to request single-click confirmation banner on the HUD (default: true)."
+                "description": "Whether to request single-click confirmation banner on the HUD (default: false). Only set to true if user explicitly asks to confirm."
             }
         },
         "required": ["action"]

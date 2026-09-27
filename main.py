@@ -73,6 +73,7 @@ def log_unhandled_exception(exc_type, exc_value, exc_traceback):
 threading.excepthook = lambda args: log_unhandled_exception(args.exc_type, args.exc_value, args.exc_traceback)
 
 import asyncio
+import gc
 import re
 import secrets
 import threading
@@ -80,6 +81,14 @@ import time
 import json
 import sys
 import traceback
+
+# ── Real-time audio & UI Garbage Collection tuning ───────────────────────────
+# By default Python uses (700, 10, 10). Under heavy streaming audio and PyQt
+# animation churn, full Generation 2 mark-and-sweep collections trigger every
+# 20-40 seconds, stopping all threads for 50-120 ms. This causes simultaneous
+# UI frame drops and audio buffer starvation (dropouts).
+# Raising thresholds minimizes involuntary stop-the-world sweeps during interaction.
+gc.set_threshold(70000, 15, 15)
 from datetime import datetime
 from pathlib import Path
 
@@ -968,7 +977,10 @@ class JarvisLive:
         key    = self._dashboard.new_key()
         url    = self._dashboard.get_url()
         manual = self._dashboard.get_manual_url()
-        return url, key, f"{url}/auto-login?key={key}", manual
+        # For desktop debugging, also provide a localhost URL (same as manual for now)
+        localhost_url = manual
+        self.ui.write_log(f"DEBUG: Remote key generated - URL: {url}, Manual: {manual}, Localhost: {localhost_url}")
+        return url, key, f"{url}/auto-login?key={key}", manual, localhost_url
 
     def _on_text_command(self, text: str):
         if not self._loop:
@@ -1921,6 +1933,15 @@ class JarvisLive:
                             self._visemes.reset()
                             continue
 
+                        # Forward internal deliberation / cognitive-trace if model returns thought parts
+                        _mt = getattr(sc, "model_turn", None)
+                        if _mt and getattr(_mt, "parts", None):
+                            for _p in _mt.parts:
+                                if getattr(_p, "thought", False):
+                                    _th = (getattr(_p, "text", "") or "").strip()
+                                    if _th:
+                                        self.ui.write_log(f"THINK: {_th}")
+
                         if sc.output_transcription and sc.output_transcription.text:
                             txt = _clean_transcript(sc.output_transcription.text)
                             # A turn that involves a tool call passes through
@@ -2043,6 +2064,7 @@ class JarvisLive:
                 dtype="int16",
                 blocksize=0,
                 device=dev,
+                latency="high",
             )
             st.start()
             return st
@@ -2077,7 +2099,7 @@ class JarvisLive:
                 try:
                     chunk = await asyncio.wait_for(
                         self.audio_in_queue.get(),
-                        timeout=0.08
+                        timeout=0.12
                     )
                 except asyncio.TimeoutError:
                     if (
@@ -2098,7 +2120,8 @@ class JarvisLive:
                 # Pre-buffering jitter cushion for fresh utterance to prevent buffer underrun crackle
                 if not self._is_speaking:
                     t_pre = time.monotonic()
-                    while len(batch) < 7200 and (time.monotonic() - t_pre) < 0.12:
+                    # Buffer up to ~250 ms (12000 bytes) or max 200 ms wait before starting speech
+                    while len(batch) < 12000 and (time.monotonic() - t_pre) < 0.20:
                         if self._turn_done_event and self._turn_done_event.is_set():
                             break
                         try:
@@ -2107,9 +2130,9 @@ class JarvisLive:
                             await asyncio.sleep(0.015)
                     self.set_speaking(True)
 
-                # Batch all immediately-available chunks into one write to reduce
-                # thread-pool round-trips. Cap at ~200 ms so interrupt() still stops audio within ~200 ms.
-                while len(batch) < 9600:   # 9600 bytes ≈ 200 ms at 24 kHz / 16-bit mono
+                # Batch available chunks into one write to reduce thread-pool round-trips
+                # (12000 bytes ≈ 250 ms at 24 kHz / 16-bit mono)
+                while len(batch) < 12000:
                     try:
                         batch.extend(self.audio_in_queue.get_nowait())
                     except asyncio.QueueEmpty:
@@ -2487,6 +2510,21 @@ class JarvisLive:
             except Exception as e:
                 print(f"[Proactive] ⚠️ {e}")
 
+    # ── Background GC maintenance ───────────────────────────────────────────────
+
+    async def _run_gc_manager(self) -> None:
+        """
+        Periodically sweeps garbage during idle silence so full Generation 2
+        collections never pause threads mid-speech or during active UI animations.
+        """
+        while True:
+            await asyncio.sleep(45)
+            with self._speaking_lock:
+                speaking = self._is_speaking
+            silent_for = time.monotonic() - self._last_user_speech
+            if not speaking and silent_for > 8.0:
+                await asyncio.to_thread(gc.collect)
+
     # ── Phone audio relay ────────────────────────────────────────────────────────
 
     async def _relay_phone_audio(self) -> None:
@@ -2732,6 +2770,7 @@ class JarvisLive:
         # Background system monitor tasks
         asyncio.create_task(self._run_system_monitor())
         asyncio.create_task(self._run_background_monitor())
+        asyncio.create_task(self._run_gc_manager())
 
         while True:
             try:
@@ -2973,6 +3012,7 @@ class JarvisLive:
                     tg.create_task(self._run_background_monitor())
                     tg.create_task(self._run_proactive_mode())
                     tg.create_task(self._run_sleep_watch())
+                    tg.create_task(self._run_gc_manager())
                     if self._dashboard:
                         tg.create_task(self._relay_phone_audio())
 

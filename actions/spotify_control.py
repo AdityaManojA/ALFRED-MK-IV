@@ -285,6 +285,8 @@ class SpotifyClient:
                 for item in items:
                     artists = ", ".join(a["name"] for a in item.get("artists", [])) if "artists" in item else ""
                     album_name = item.get("album", {}).get("name", "")
+                    # Extract popularity for sorting (higher is more popular)
+                    popularity = item.get("popularity", 0)
                     results.append({
                         "name": item.get("name"),
                         "artist": artists,
@@ -293,7 +295,8 @@ class SpotifyClient:
                         "id": item.get("id"),
                         "preview_url": item.get("preview_url"),
                         "external_url": item.get("external_urls", {}).get("spotify", ""),
-                        "type": stype
+                        "type": stype,
+                        "popularity": popularity
                     })
                 return results
             else:
@@ -321,8 +324,11 @@ class SpotifyClient:
 
         # If a query is provided, find the best match
         if query and not target_uri:
-            results = self.search(query, search_type=search_type, limit=1)
+            # Get more results to choose from, then sort by popularity
+            results = self.search(query, search_type=search_type, limit=10)
             if results:
+                # Sort by popularity (descending) and take the most popular
+                results.sort(key=lambda x: x.get("popularity", 0), reverse=True)
                 top = results[0]
                 target_uri = top["uri"]
                 track_info = top
@@ -738,8 +744,11 @@ def spotify_control(
 
         elif action in ("queue", "add_to_queue"):
             if not uri and query:
-                results = client.search(query, search_type="track", limit=1)
+                # Get more results to choose from, then sort by popularity
+                results = client.search(query, search_type="track", limit=10)
                 if results:
+                    # Sort by popularity (descending) and take the most popular
+                    results.sort(key=lambda x: x.get("popularity", 0), reverse=True)
                     uri = results[0]["uri"]
             if uri:
                 ok = client.manage_queue(uri, action="add", device_id=device_id)
@@ -777,7 +786,8 @@ def spotify_control(
             else:
                 lines = [f"Spotify search results for '{query}':"]
                 for i, r in enumerate(results, 1):
-                    lines.append(f"{i}. {r['name']} — {r['artist']} ({r['uri']})")
+                    popularity = r.get('popularity', 0)
+                    lines.append(f"{i}. {r['name']} — {r['artist']} [Popularity: {popularity}/100] ({r['uri']})")
                 return "\n".join(lines)
 
         elif action in ("current_track", "what_is_playing", "now_playing"):

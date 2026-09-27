@@ -125,7 +125,7 @@
       min-height: -webkit-fill-available;
       background: radial-gradient(circle at 50% 10%, #121528 0%, #090a12 65%, #05060a 100%);
       color: var(--text);
-      font-family: 'Cascadia Code', 'SF Mono', Consolas, 'Fira Code', 'Courier New', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', 'Cascadia Code', 'SF Mono', monospace;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -327,7 +327,7 @@
     }
     .url {
       font-size: 10px;
-      font-family: 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
       color: var(--muted);
       padding: 5px 10px;
       background: rgba(0, 240, 255, 0.04);
@@ -433,7 +433,7 @@
       font-size: 9px;
       padding: 1px 6px;
       border-radius: 10px;
-      font-family: 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
     }
 
     #intel-vault {
@@ -521,7 +521,7 @@
     .intel-time {
       font-size: 9px;
       color: var(--muted);
-      font-family: 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
     }
     .intel-card-title {
       font-size: 13px;
@@ -549,7 +549,7 @@
       border-radius: 6px;
       padding: 8px 10px;
       color: #a5f3fc;
-      font-family: 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
       font-size: 11px;
       overflow-x: auto;
       margin-top: 6px;
@@ -582,7 +582,7 @@
     }
     .msg-time {
       font-size: 9px;
-      font-family: 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
       color: var(--muted);
       opacity: 0.85;
     }
@@ -772,7 +772,7 @@
       100% { opacity: 1; transform: scale(1.1); text-shadow: 0 0 8px var(--accent); }
     }
     .deck-status {
-      font-family: 'Cascadia Code', 'SF Mono', monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', monospace;
       color: var(--muted);
       font-size: 8px;
       letter-spacing: 0.5px;
@@ -800,7 +800,7 @@
       border: 1px solid var(--border);
       border-radius: 9px;
       color: var(--text);
-      font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'SF Mono', Consolas, monospace;
       font-size: 9.5px;
       font-weight: 700;
       letter-spacing: 0.8px;
@@ -1020,7 +1020,7 @@
     /* Telemetry Transcript Card */
     .msg-telemetry {
       align-self: flex-start;
-      font-family: 'SF Mono', Consolas, monospace;
+      font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', Consolas, monospace;
       font-size: 11px;
       line-height: 1.4;
       color: #94a3b8;
@@ -1436,8 +1436,33 @@
     let reactorAmp = 0.0;
     let isSpeaking = false;
     let assistantName = 'ALFRED';
+let _ttsActive = true;
+let _initialHistoryLoaded = true;
 
-    // Particle Stardust Field
+function toggleTTS() {
+  _ttsActive = !_ttsActive;
+  const btn = document.getElementById('tts-btn');
+  const label = document.getElementById('tts-st');
+  if (_ttsActive) {
+    btn.classList.add('on');
+    label.textContent = 'TTS ON';
+  } else {
+    btn.classList.remove('on');
+    label.textContent = 'TTS OFF';
+  }
+}
+
+function speakOnMobile(text) {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 1.0;
+    utterance.volume = 1.0;
+    speechSynthesis.speak(utterance);
+  }
+}
+
+// Particle Stardust Field
     let particles = [];
     function initReactorParticles() {
       particles = [];

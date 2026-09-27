@@ -113,7 +113,7 @@ class TelemetryHUD(QWidget):
         label_style = """
             QLabel {
                 color: #dde3ed;
-                font-family: 'Consolas', 'Monaco', monospace;
+                font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace;
                 font-size: 9pt;
                 padding: 2px;
             }

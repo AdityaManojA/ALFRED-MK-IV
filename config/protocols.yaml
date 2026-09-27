@@ -64,19 +64,29 @@ locked_in:
   description: Open AntiGravity IDE, Spotify, and play Back in Black by AC/DC.
   triggers:
   - let's lock in
+  - lock in
+  - activate lock in
   steps:
+  - tool: focus_protocol
+    parameters:
+      action: stop
   - parameters:
       app_name: AntiGravity IDE
     tool: open_app
+    sleep_ms: 1000
   - parameters:
       app_name: Spotify
     tool: open_app
     sleep_ms: 2000
-  - sleep_ms: 1000
-    tool: spotify_control
+  - parameters:
+      image_path: D:/Projects/Alfred-Mark-IV/LockIN.jpg
+    tool: show_image_popup
+    sleep_ms: 1000
+  - tool: spotify_control
     parameters:
       action: play
       query: Back In Black by AC/DC
+    sleep_ms: 1000
 wake_up_daddys_home:
   description: Max brightness, start music, wait 2s, open wallpaper URL in Brave.
   triggers:
@@ -102,7 +112,8 @@ wake_up_daddys_home:
 focus_mode:
   description: Begin a deep work session.
   triggers:
-  - let's focus
+  - focus mode
+  - study mode
   steps:
   - tool: focus_protocol
     parameters:

@@ -633,11 +633,12 @@ class C:
 
 # Monospaced Retro-Futuristic Terminal Typography (OCR / CRT Matrix / Cascadia)
 _TECH_FONT_FAMILIES = (
-    "Cascadia Code", "SF Mono", "Consolas", "JetBrains Mono",
-    "Fira Code", "Courier New", "monospace"
+    "JetBrains Mono", "Fira Code", "Consolas", "Courier New",
+    "Cascadia Code", "SF Mono", "monospace"
 )
 _MONO_FONT_FAMILIES = (
-    "Cascadia Code", "SF Mono", "Consolas", "Courier New", "monospace"
+    "JetBrains Mono", "Fira Code", "Consolas", "Courier New",
+    "Cascadia Code", "SF Mono", "monospace"
 )
 
 
@@ -838,6 +839,12 @@ class _SysMetrics:
         self.net  = 0.0   
         self.gpu  = -1.0  
         self.tmp  = -1.0  
+        self.proc_count = 0
+        self.uptime_str = "--:--"
+        try:
+            self._boot_time = psutil.boot_time()
+        except Exception:
+            self._boot_time = time.time()
         self._lock = threading.Lock()
         self._last_net = psutil.net_io_counters()
         self._last_net_t = time.time()
@@ -890,12 +897,25 @@ class _SysMetrics:
             gpu = self.gpu
             tmp = self.tmp
 
+        # Process count & uptime (evaluated in background worker thread, NOT Qt main thread)
+        try:
+            proc_count = len(psutil.pids())
+        except Exception:
+            proc_count = getattr(self, "proc_count", 0)
+
+        elapsed = time.time() - self._boot_time
+        h = int(elapsed // 3600)
+        m = int((elapsed % 3600) // 60)
+        uptime_str = f"{h:02d}:{m:02d}"
+
         with self._lock:
             self.cpu = cpu
             self.mem = mem
             self.net = net
             self.gpu = gpu
             self.tmp = tmp
+            self.proc_count = proc_count
+            self.uptime_str = uptime_str
 
     def _get_gpu(self) -> float:
         # pynvml — subprocess-free; initialise once and reuse the handle.
@@ -983,6 +1003,8 @@ class _SysMetrics:
                 "net": self.net,
                 "gpu": self.gpu,
                 "tmp": self.tmp,
+                "proc": self.proc_count,
+                "uptime": self.uptime_str,
             }
 
 
@@ -3075,6 +3097,7 @@ class LogWidget(QTextEdit):
         self._pos     = 0
         self._tag     = "sys"
         self._ai_name_lc = "alfred"   # updated when assistant name changes
+        self.show_thinking = False    # set by MainWindow's thinking toggle
         self._tmr = QTimer(self)
         self._tmr.timeout.connect(self._step)
         self._sig.connect(self._enqueue)
@@ -3083,6 +3106,9 @@ class LogWidget(QTextEdit):
         self._sig.emit(text)
 
     def _enqueue(self, text: str):
+        # Filter cognitive-trace lines unless the toggle is active
+        if not self.show_thinking and text.startswith("THINK:"):
+            return
         self._queue.append(text)
         if not self._typing:
             self._next()
@@ -3098,6 +3124,7 @@ class LogWidget(QTextEdit):
         _ai_pfx = f"{self._ai_name_lc}:"
         if   tl.startswith("you:"):                              self._tag = "you"
         elif tl.startswith(_ai_pfx) or tl.startswith("alfred:") or tl.startswith("jarvis:"): self._tag = "ai"
+        elif tl.startswith("think:"):                            self._tag = "think"
         elif tl.startswith("file:"):                             self._tag = "file"
         elif "err" in tl:                                        self._tag = "err"
         else:                                                    self._tag = "sys"
@@ -3112,18 +3139,18 @@ class LogWidget(QTextEdit):
             cur = self.textCursor()
             fmt = cur.charFormat()
             col = {
-                "you":  qcol(C.WHITE),
-                "ai":   qcol(C.PRI),
-                "err":  qcol(C.RED),
-                "file": qcol(C.GREEN),
-                # SYS lines are the bulk of the log. Amber fought the cyan HUD
-                # and, being a fixed status colour rather than a hue-linked one,
-                # stayed amber even after the accent picker retinted everything
-                # else. TEXT_MED follows the theme and drops the contrast to a
-                # level you can read past.
-                "sys":  qcol(C.TEXT_MED),
+                "you":   qcol(C.WHITE),
+                "ai":    qcol(C.PRI),
+                "think": qcol(C.MUTED),
+                "err":   qcol(C.RED),
+                "file":  qcol(C.GREEN),
+                "sys":   qcol(C.TEXT_MED),
             }.get(self._tag, qcol(C.TEXT))
             fmt.setForeground(QBrush(col))
+            if self._tag == "think":
+                fmt.setFontItalic(True)
+            else:
+                fmt.setFontItalic(False)
             cur.movePosition(cur.MoveOperation.End)
             cur.insertText(chunk, fmt)
             self.setTextCursor(cur)
@@ -3300,10 +3327,10 @@ class NotesTerminalWidget(QWidget):
         <html>
         <head>
         <style>
-            body {{ font-family: 'Consolas', 'Segoe UI', monospace; background: transparent; margin: 0; padding: 2px; }}
+            body {{ font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', 'Courier New', monospace; background: transparent; margin: 0; padding: 2px; }}
             a {{ color: #00f0ff; text-decoration: underline; }}
             a:hover {{ color: #ffffff; text-decoration: none; }}
-            pre {{ background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 6px; padding: 8px; color: #a5f3fc; font-family: Consolas, monospace; font-size: 11px; white-space: pre-wrap; }}
+            pre {{ background: rgba(0, 0, 0, 0.45); border: 1px solid rgba(0, 240, 255, 0.15); border-radius: 6px; padding: 8px; color: #a5f3fc; font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace; font-size: 11px; white-space: pre-wrap; }}
         </style>
         </head>
         <body>
@@ -6080,7 +6107,7 @@ class RemoteKeyOverlay(QWidget):
     _OW, _OH = 400, 465
 
     def __init__(self, url: str, key: str, auto_login_url: str = "",
-                 manual_url: str = "", expiry_secs: int = 600, parent=None):
+                 manual_url: str = "", desktop_url: str = "", expiry_secs: int = 600, parent=None):
         super().__init__(parent)
         self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
         self.setStyleSheet(f"""
@@ -6094,6 +6121,7 @@ class RemoteKeyOverlay(QWidget):
         self._on_new_key      = None
         self._auto_login_url  = auto_login_url
         self._manual_url      = manual_url or url
+        self._desktop_url     = desktop_url
 
         lay = QVBoxLayout(self)
         lay.setContentsMargins(24, 18, 24, 18)
@@ -6146,6 +6174,17 @@ class RemoteKeyOverlay(QWidget):
         self._url_lbl.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse)
         lay.addWidget(self._url_lbl)
+
+        lay.addWidget(_lbl("Desktop Debug Link:", 7, bold=True, color=C.TEXT_DIM,
+                           align=Qt.AlignmentFlag.AlignLeft))
+
+        self._desktop_lbl = QLabel(self._desktop_url)
+        self._desktop_lbl.setFont(mono_font(8))
+        self._desktop_lbl.setStyleSheet(f"color: {C.PRI_DIM}; background: transparent;")
+        self._desktop_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self._desktop_lbl.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse)
+        lay.addWidget(self._desktop_lbl)
 
         self._key_lbl = QLabel(key)
         self._key_lbl.setFont(mono_font(26, QFont.Weight.Bold, 120))
@@ -6273,9 +6312,12 @@ class RemoteKeyOverlay(QWidget):
                 key    = result[1]
                 auto   = result[2] if len(result) >= 3 else ""
                 manual = result[3] if len(result) >= 4 else url
+                localhost_url = result[4] if len(result) >= 5 else None
                 self._manual_url     = manual or url
                 self._url_lbl.setText(self._manual_url)
                 self._key_lbl.setText(key)
+                if localhost_url is not None:
+                    self._desktop_lbl.setText(localhost_url)
                 self._auto_login_url = auto
                 self._update_qr(auto or url)
                 self._expiry = time.time() + 600
@@ -7034,21 +7076,10 @@ class MainWindow(QMainWindow):
             self._bar_tmp.set_value(0, "N/A")
 
         if hasattr(self, "_uptime_lbl"):
-            try:
-                boot_t  = psutil.boot_time()
-                elapsed = time.time() - boot_t
-                h = int(elapsed // 3600)
-                m = int((elapsed % 3600) // 60)
-                self._uptime_lbl.setText(f"UP  {h:02d}:{m:02d}")
-            except Exception:
-                self._uptime_lbl.setText("UP  --:--")
+            self._uptime_lbl.setText(f"UP  {snap.get('uptime', '--:--')}")
 
         if hasattr(self, "_proc_lbl"):
-            try:
-                proc_count = len(psutil.pids())
-                self._proc_lbl.setText(f"PROC  {proc_count}")
-            except Exception:
-                self._proc_lbl.setText("PROC  --")
+            self._proc_lbl.setText(f"PROC  {snap.get('proc', '--')}")
 
 
     def _build_header(self) -> QWidget:
@@ -7342,6 +7373,23 @@ class MainWindow(QMainWindow):
         self._notes_terminal.note_added.connect(self._on_notes_count_updated)
         self._terminal_stack.addWidget(self._log)
         self._terminal_stack.addWidget(self._notes_terminal)
+
+        # ── Cognitive-trace (thinking) toggle ──────────────────────────────────
+        # Sits between the dossier card and the tab row so it is clearly
+        # "above the chat" without eating space from the log itself.
+        self._think_btn = QPushButton("[ ◈ ]  COGNITIVE TRACE : OFF")
+        self._think_btn.setFixedHeight(24)
+        self._think_btn.setFont(mono_font(7, QFont.Weight.Bold, letter_spacing=0.6))
+        self._think_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._think_btn.setCheckable(True)
+        self._think_btn.setChecked(False)
+        self._think_btn.setToolTip(
+            "Show / hide the agent's internal reasoning trace (THINK: prefixed lines)"
+        )
+        self._style_think_btn(False)
+        self._think_btn.toggled.connect(self._toggle_think)
+        lay.addWidget(self._think_btn)
+
         lay.addWidget(self._terminal_stack, stretch=1)
         self._update_tab_button_styles(0)
 
@@ -7809,7 +7857,7 @@ class MainWindow(QMainWindow):
     def _show_review(self, title: str, summary: str, findings, unclear):
         """Slot — Qt main thread. Lays a document review into the content panel."""
         e = self._esc
-        parts = [f'<div style="color:{C.TEXT}; font-family:\'SF Pro Display\', \'SF Pro Text\', \'-apple-system\', \'Segoe UI\', sans-serif; font-size:12px; line-height:1.6;">']
+        parts = [f'<div style="color:{C.TEXT}; font-family:\'JetBrains Mono\', \'Fira Code\', \'SF Pro Display\', \'SF Pro Text\', \'-apple-system\', \'Segoe UI\', sans-serif; font-size:12px; line-height:1.6;">']
 
         if summary:
             parts.append(
@@ -8198,13 +8246,17 @@ class MainWindow(QMainWindow):
         url    = result[0]
         key    = result[1]
         auto   = result[2] if len(result) >= 3 else ""
+        manual = result = result[0]
+        key    = result[1]
+        auto   = result[2] if len(result) >= 3 else ""
         manual = result[3] if len(result) >= 4 else url
+        localhost_url = result[4] if len(result) >= 5 else None
         if self._remote_overlay:
             self._remote_overlay._do_close()
         cw  = self.centralWidget()
         ow, oh = RemoteKeyOverlay._OW, RemoteKeyOverlay._OH
         ov  = RemoteKeyOverlay(url, key, auto_login_url=auto, manual_url=manual,
-                               expiry_secs=600, parent=cw)
+                               desktop_url=localhost_url, expiry_secs=600, parent=cw)
         ov.set_new_key_callback(self.on_remote_clicked)
         ov.setGeometry(
             (cw.width()  - ow) // 2,
@@ -9047,6 +9099,63 @@ class MainWindow(QMainWindow):
                     color: #ffffff;
                 }}
             """)
+
+    # ── Cognitive-trace toggle ────────────────────────────────────────────────
+
+    def _style_think_btn(self, active: bool) -> None:
+        """Style the COGNITIVE TRACE toggle to reflect its on/off state."""
+        if active:
+            self._think_btn.setText("[ ◈ ]  COGNITIVE TRACE : ON")
+            self._think_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: rgba(0, 240, 255, 0.10);
+                    color: {C.PRI};
+                    border: 1px solid {C.PRI_DIM};
+                    border-radius: 2px;
+                    padding: 0 8px;
+                    font-weight: bold;
+                }}
+                QPushButton:hover {{
+                    background: {C.PRI_GHO};
+                    border-color: {C.PRI};
+                }}
+                QPushButton:pressed {{
+                    background: rgba(0, 240, 255, 0.25);
+                }}
+            """)
+        else:
+            self._think_btn.setText("[ ◈ ]  COGNITIVE TRACE : OFF")
+            self._think_btn.setStyleSheet(f"""
+                QPushButton {{
+                    background: transparent;
+                    color: {C.TEXT_DIM};
+                    border: 1px solid {C.BORDER};
+                    border-radius: 2px;
+                    padding: 0 8px;
+                }}
+                QPushButton:hover {{
+                    color: {C.TEXT_MED};
+                    border-color: {C.BORDER_B};
+                    background: rgba(255, 255, 255, 0.03);
+                }}
+                QPushButton:pressed {{
+                    background: rgba(255, 255, 255, 0.06);
+                }}
+            """)
+
+    def _toggle_think(self, active: bool) -> None:
+        """Show or hide the agent's internal reasoning trace in the chat log."""
+        self._log.show_thinking = active
+        self._style_think_btn(active)
+        if active:
+            self._log.append_log(
+                "SYS: Cognitive trace enabled, sir. "
+                "You may now observe the deliberation behind each response."
+            )
+        else:
+            self._log.append_log(
+                "SYS: Cognitive trace concealed, sir. Only the conclusions remain."
+            )
 
     def _toggle_sentry_mode(self, checked: bool) -> None:
         """Toggle continuous visual context (camera stream) monitoring."""

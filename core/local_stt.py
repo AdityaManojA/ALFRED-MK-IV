@@ -9,6 +9,19 @@ import threading
 import time
 from typing import Optional, Callable
 
+# ── Speech-finalisation debounce ──────────────────────────────────────────────
+# Vosk fires a "final" result every time the user pauses, even mid-sentence.
+# Instead of dispatching immediately, accumulate finals and wait FINISH_MS for
+# more speech. If the timer fires without new input the full sentence is sent.
+# Short interrupt words (single word, in _INTERRUPT_WORDS) skip this entirely
+# and fire at once.
+FINISH_MS = 900          # milliseconds to wait before committing a sentence
+
+_INTERRUPT_WORDS: frozenset[str] = frozenset({
+    "stop", "wait", "pause", "cancel", "abort", "halt",
+    "quiet", "silence", "enough", "nevermind", "shh",
+})
+
 from core.stt import WhisperSTT, VoskSTT
 
 
@@ -46,6 +59,13 @@ class LocalSTTManager:
         # Transcription results
         self.transcript_queue = queue.Queue()
         self.partial_transcript = ""
+
+        # ── FINISH_MS speech debounce state (Vosk path) ───────────────────────
+        # _speech_buf accumulates final chunks; _finish_timer fires after
+        # FINISH_MS of silence and commits the full accumulated sentence.
+        self._speech_buf: list[str] = []
+        self._finish_timer: threading.Timer | None = None
+        self._speech_buf_lock = threading.Lock()
 
     def set_audio_callback(self, callback: Optional[Callable[[bytes], None]]):
         """Set callback to receive raw audio data."""
@@ -114,12 +134,71 @@ class LocalSTTManager:
         else:  # whisper
             self._process_whisper_audio(audio_bytes)
 
+    # ── FINISH_MS helpers ────────────────────────────────────────────────────
+
+    def _cancel_finish_timer(self) -> None:
+        """Cancel any pending debounce timer, thread-safe."""
+        with self._speech_buf_lock:
+            t = self._finish_timer
+            self._finish_timer = None
+        if t is not None:
+            t.cancel()
+
+    def _restart_finish_timer(self) -> None:
+        """Reset the FINISH_MS countdown from zero."""
+        with self._speech_buf_lock:
+            t = self._finish_timer
+            self._finish_timer = threading.Timer(
+                FINISH_MS / 1000.0, self._on_finish_timer
+            )
+            self._finish_timer.daemon = True
+            self._finish_timer.start()
+        if t is not None:
+            t.cancel()
+
+    def _on_finish_timer(self) -> None:
+        """Timer callback: commit the accumulated sentence to the queue."""
+        with self._speech_buf_lock:
+            self._finish_timer = None
+            sentence = " ".join(self._speech_buf).strip()
+            self._speech_buf.clear()
+        if sentence:
+            self.transcript_queue.put(sentence)
+            self.partial_transcript = ""
+
+    def _flush_speech_buffer(self, extra: str = "") -> None:
+        """Immediately commit whatever is in the buffer (+ optional extra word)."""
+        with self._speech_buf_lock:
+            parts = list(self._speech_buf)
+            self._speech_buf.clear()
+        if extra:
+            parts.append(extra)
+        sentence = " ".join(parts).strip()
+        if sentence:
+            self.transcript_queue.put(sentence)
+            self.partial_transcript = ""
+
+    # ── Vosk streaming handler ───────────────────────────────────────────────
+
     def _process_vosk_audio(self, audio_bytes: bytes):
-        """Process audio using Vosk streaming STT."""
+        """Process audio using Vosk streaming STT.
+
+        Final results are held for FINISH_MS before dispatch so that
+        mid-sentence pauses do not fragment the user's thought.
+        Single-word interrupt commands bypass the buffer and fire at once.
+        """
         try:
             text, is_final = self.stt.process_chunk(audio_bytes)
             if is_final and text.strip():
-                self.transcript_queue.put(text.strip())
+                word = text.strip()
+                # Short interrupt words bypass the buffer and fire instantly
+                if word.lower() in _INTERRUPT_WORDS and " " not in word:
+                    self._cancel_finish_timer()
+                    self._flush_speech_buffer(extra=word)
+                else:
+                    with self._speech_buf_lock:
+                        self._speech_buf.append(word)
+                    self._restart_finish_timer()
                 self.partial_transcript = ""
             elif text.strip():
                 self.partial_transcript = text.strip()
