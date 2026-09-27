@@ -60,14 +60,51 @@ dev_mode:
     parameters:
       action: open
       path: documents
-hack_mode:
-  description: Open Brave in incognito mode.
+locked_in:
+  description: Open AntiGravity IDE, Spotify, and play Back in Black by AC/DC.
   triggers:
-  - hacker
-  - hack mode
+  - let's lock in
   steps:
+  - parameters:
+      app_name: AntiGravity IDE
+    tool: open_app
+  - parameters:
+      app_name: Spotify
+    tool: open_app
+    sleep_ms: 2000
+  - sleep_ms: 1000
+    tool: spotify_control
+    parameters:
+      action: play
+      query: Back In Black by AC/DC
+wake_up_daddys_home:
+  description: Max brightness, start music, wait 2s, open wallpaper URL in Brave.
+  triggers:
+  - wake up daddy's home
+  steps:
+  - tool: computer_settings
+    parameters:
+      action: brightness_set
+      value: '100'
+  - parameters:
+      action: play
+      query: Back in Black by AC/DC
+    tool: spotify_control
+  - tool: computer_control
+    parameters:
+      seconds: 2
+      action: wait
   - tool: browser_control
     parameters:
-      browser: brave
       action: go_to
-      incognito: true
+      browser: brave
+      url: https://wallpapercat.com/w/full/c/f/f/320224-1920x1080-desktop-full-hd-iron-man-wallpaper.jpg
+focus_mode:
+  description: Begin a deep work session.
+  triggers:
+  - let's focus
+  steps:
+  - tool: focus_protocol
+    parameters:
+      action: start
+      duration_minutes: 25

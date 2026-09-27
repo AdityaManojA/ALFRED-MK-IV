@@ -215,7 +215,7 @@ class TronScoreBackgroundPlayer(QObject):
             initial_track = self._playlist[0]
 
         if initial_track:
-            self.load_track(initial_track, auto_play=True)
+            self.load_track(initial_track, auto_play=False)
 
     def _save_playlist_config(self):
         try:
@@ -4299,6 +4299,77 @@ class SetupOverlay(QWidget):
         self.done.emit(config_dict)
 
 
+class ImagePopupOverlay(QWidget):
+    dismissed = pyqtSignal()
+
+    def __init__(self, image_path: str, parent=None):
+        super().__init__(parent)
+        self.setAttribute(Qt.WidgetAttribute.WA_StyledBackground, True)
+        self.setWindowFlags(Qt.WindowType.Dialog | Qt.WindowType.FramelessWindowHint)
+        self.setStyleSheet(f"""
+            ImagePopupOverlay {
+                background: {C.PANEL_BG};
+                border: 1px solid {C.BORDER_B};
+                border-radius: 4px;
+            }
+        """)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(12, 12, 12, 12)
+        layout.setSpacing(8)
+
+        # Image label
+        self._image_label = QLabel()
+        self._image_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        pixmap = QPixmap(image_path)
+        if not pixmap.isNull():
+            # Scale image to fit reasonably, max width/height 400px while keeping aspect ratio
+            scaled = pixmap.scaled(400, 400, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation)
+            self._image_label.setPixmap(scaled)
+        else:
+            self._image_label.setText(f"[Image not found: {image_path}]")
+            self._image_label.setStyleSheet(f"color: {C.TEXT_MED};")
+        layout.addWidget(self._image_label)
+
+        # Dismiss button
+        dismiss_btn = QPushButton("Dismiss")
+        dismiss_btn.setFont(tech_font(9, QFont.Weight.Bold))
+        dismiss_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        dismiss_btn.setFixedHeight(28)
+        dismiss_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.PRI};
+                color: {C.DARK};
+                border: 1px solid {C.PRI};
+                border-radius: 2px;
+                font-weight: bold;
+            }}
+            QPushButton:hover {{
+                background: {C.TEXT_BRIGHT};
+                color: #000000;
+                border-color: #ffffff;
+            }}
+            QPushButton:pressed {{
+                background: {C.PRI_DIM};
+                color: {C.DARK};
+            }}
+        """)
+        dismiss_btn.clicked.connect(self.hide)
+        dismiss_btn.clicked.connect(self.dismissed.emit)
+        layout.addWidget(dismiss_btn, alignment=Qt.AlignmentFlag.AlignCenter)
+
+    def show_centered(self, parent: QWidget):
+        """Show the popup centered over the parent widget."""
+        if parent:
+            self.move(
+                parent.x() + (parent.width() - self.width()) // 2,
+                parent.y() + (parent.height() - self.height()) // 2,
+            )
+        self.show()
+        self.raise_()
+        self.activateWindow
+
+
 class HueWheel(QWidget):
     """
     Circular colour picker. The user drags the handle (small white circle)
@@ -6426,7 +6497,7 @@ class MainWindow(QMainWindow):
         self._quiz_sig.connect(self._show_quiz)
         self._quiz_hide_sig.connect(self._hide_quiz)
         self._review_sig.connect(self._show_review)
-        self._intel_note_sig.connect(self._on_intel_note_received)
+        self._intel_note_sig.connect(self._on_intel_note_received, Qt.ConnectionType.QueuedConnection)
         self._clear_log_sig.connect(self._on_clear_chat)
         self._cam_stop = threading.Event()
 
@@ -9453,3 +9524,19 @@ class JarvisUI:
     def stop_speaking(self):
         if not self.muted:
             self.set_state("LISTENING")
+
+    def pause_audio_core(self) -> bool:
+        """Pause the Audio Core (TRON background music engine)."""
+        return self._win.pause_audio_core()
+
+    def resume_audio_core(self) -> bool:
+        """Resume or play the Audio Core (TRON background music engine)."""
+        return self._win.resume_audio_core()
+
+    def set_audio_core_volume(self, volume_percent: int) -> float:
+        """Set base volume of the Audio Core (0 to 100)."""
+        return self._win.set_audio_core_volume(volume_percent)
+
+    def get_audio_core_status(self) -> dict:
+        """Get status of the Audio Core."""
+        return self._win.get_audio_core_status()

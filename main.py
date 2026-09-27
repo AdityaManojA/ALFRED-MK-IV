@@ -42,6 +42,36 @@ for _stream in ("stdout", "stderr"):
 
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Crash reporting
+import traceback
+import sys
+import threading
+from datetime import datetime
+from pathlib import Path
+
+def log_unhandled_exception(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        sys.__excepthook__(exc_type, exc_value, exc_traceback)
+        return
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    crash_msg = f"\n{'='*60}\nCRASH REPORT - {timestamp}\n{'='*60}\n"
+    crash_msg += f"Exception: {exc_type.__name__}: {exc_value}\n"
+    crash_msg += "Traceback:\n"
+    crash_msg += ''.join(traceback.format_exception(exc_type, exc_value, exc_traceback))
+    crash_msg += f"\n{'='*60}\n"
+    try:
+        crash_dir = Path(__file__).resolve().parent / "config"
+        crash_dir.mkdir(exist_ok=True)
+        crash_file = crash_dir / "crash.log"
+        with open(crash_file, "a", encoding="utf-8") as f:
+            f.write(crash_msg)
+    except Exception:
+        pass
+    sys.__excepthook__(exc_type, exc_value, exc_traceback)
+
+# Also set threading excepthook for threads
+threading.excepthook = lambda args: log_unhandled_exception(args.exc_type, args.exc_value, args.exc_traceback)
+
 import asyncio
 import re
 import secrets
@@ -92,6 +122,10 @@ from core.viseme               import VisemeStream
 from core.wake_word            import (
     WakeWordDetector, is_ready as wake_is_ready, install_and_download as wake_install,
 )
+# Local pipeline imports
+from core.local_stt            import create_local_stt_engine
+from core.local_ttt            import create_local_tts_engine
+from core.local_pipeline       import create_local_pipeline
 
 # How long the assistant stays awake with no user speech before it auto-sleeps
 # again (wake-word mode only).
@@ -641,6 +675,10 @@ class JarvisLive:
         self._interrupted          = False   # True while draining audio after user interrupt
         self._briefing_cancelled   = False   # True if user interrupted morning briefing
         self._deliver_news_task    = None    # Task handle for Phase 2 news delivery
+        # Local audio pipeline
+        self._local_pipeline       = None
+        self._local_mode_config    = {}
+        self._is_local_pipeline_active = False
         # Transcript-driven mouth shapes for the avatar. Fed from the receive
         # loop as words arrive, drained by the playback loop against the audio.
         self._visemes              = VisemeStream()
