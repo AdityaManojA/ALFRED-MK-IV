@@ -523,9 +523,10 @@ class DashboardServer:
 
     def get_manual_url(self) -> str:
         """URL for manual browser entry. When HTTPS active, points to alias port (also HTTPS)."""
+        proto = "https" if self._ssl_enabled() else "http"
         if self._ssl_enabled():
-            return f"{self._ip}:{PORT + 1}"
-        return f"{self._ip}:{PORT}"
+            return f"{proto}://{self._ip}:{PORT + 1}"
+        return f"{proto}://{self._ip}:{PORT}"
 
     def _aes_key(self, session_key: str) -> bytes:
         if session_key not in self._aes_cache:

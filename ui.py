@@ -6104,7 +6104,7 @@ class RemoteKeyOverlay(QWidget):
 
     closed = pyqtSignal()
 
-    _OW, _OH = 400, 465
+    _OW, _OH = 420, 530
 
     def __init__(self, url: str, key: str, auto_login_url: str = "",
                  manual_url: str = "", desktop_url: str = "", expiry_secs: int = 600, parent=None):
@@ -6124,7 +6124,7 @@ class RemoteKeyOverlay(QWidget):
         self._desktop_url     = desktop_url
 
         lay = QVBoxLayout(self)
-        lay.setContentsMargins(24, 18, 24, 18)
+        lay.setContentsMargins(24, 16, 24, 16)
         lay.setSpacing(6)
 
         def _lbl(txt, fs=9, bold=False, color=C.PRI,
@@ -6156,44 +6156,48 @@ class RemoteKeyOverlay(QWidget):
         qr_row.addStretch()
         lay.addLayout(qr_row)
 
-        self._update_qr(auto_login_url)
+        self._update_qr(auto_login_url or url)
 
-        lay.addWidget(_lbl("Scan with mobile optical sensor to pair instantaneously", 8, color=C.TEXT_DIM))
+        lay.addWidget(_lbl("Scan with mobile device camera to open web view immediately", 8, color=C.TEXT_DIM))
 
         sep2 = QFrame(); sep2.setFrameShape(QFrame.Shape.HLine)
         sep2.setStyleSheet(f"color: {C.BORDER}; margin: 2px 0;")
         lay.addWidget(sep2)
 
-        lay.addWidget(_lbl("Manual Uplink Coordinates:", 7, bold=True, color=C.TEXT_DIM,
+        lay.addWidget(_lbl("Manual LAN Coordinates:", 7, bold=True, color=C.TEXT_DIM,
                            align=Qt.AlignmentFlag.AlignLeft))
 
-        self._url_lbl = QLabel(self._manual_url)
+        self._url_lbl = QLabel()
         self._url_lbl.setFont(mono_font(8))
         self._url_lbl.setStyleSheet(f"color: {C.PRI_DIM}; background: transparent;")
         self._url_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._url_lbl.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse)
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self._url_lbl.setOpenExternalLinks(True)
         lay.addWidget(self._url_lbl)
 
-        lay.addWidget(_lbl("Desktop Debug Link:", 7, bold=True, color=C.TEXT_DIM,
+        lay.addWidget(_lbl("Desktop Web View Link (Click to open):", 7, bold=True, color=C.TEXT_DIM,
                            align=Qt.AlignmentFlag.AlignLeft))
 
-        self._desktop_lbl = QLabel(self._desktop_url)
+        self._desktop_lbl = QLabel()
         self._desktop_lbl.setFont(mono_font(8))
         self._desktop_lbl.setStyleSheet(f"color: {C.PRI_DIM}; background: transparent;")
         self._desktop_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self._desktop_lbl.setTextInteractionFlags(
-            Qt.TextInteractionFlag.TextSelectableByMouse)
+            Qt.TextInteractionFlag.TextSelectableByMouse | Qt.TextInteractionFlag.LinksAccessibleByMouse)
+        self._desktop_lbl.setOpenExternalLinks(True)
         lay.addWidget(self._desktop_lbl)
 
+        self._render_links()
+
         self._key_lbl = QLabel(key)
-        self._key_lbl.setFont(mono_font(26, QFont.Weight.Bold, 120))
+        self._key_lbl.setFont(mono_font(24, QFont.Weight.Bold, 120))
         self._key_lbl.setStyleSheet(f"""
             color: {C.ACC};
             background: rgba(3, 14, 25, 0.90);
             border: 1px solid {C.BORDER_A};
             border-radius: 8px;
-            padding: 8px 4px;
+            padding: 6px 4px;
         """)
         self._key_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(self._key_lbl)
@@ -6204,23 +6208,38 @@ class RemoteKeyOverlay(QWidget):
         self._timer_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         lay.addWidget(self._timer_lbl)
 
-        btn_row = QHBoxLayout(); btn_row.setSpacing(8)
-        new_btn = QPushButton("GENERATE KEY")
-        new_btn.setFixedHeight(34)
-        new_btn.setFont(tech_font(8, QFont.Weight.Bold, 40))
+        btn_row = QHBoxLayout(); btn_row.setSpacing(6)
+
+        open_btn = QPushButton("↗ OPEN IN BROWSER")
+        open_btn.setFixedHeight(32)
+        open_btn.setFont(tech_font(8, QFont.Weight.Bold, 30))
+        open_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        open_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: rgba(0, 240, 255, 0.15); color: {C.PRI};
+                border: 1px solid {C.PRI}; border-radius: 5px;
+            }}
+            QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid #ffffff; color: #ffffff; }}
+        """)
+        open_btn.clicked.connect(self._open_in_browser)
+        btn_row.addWidget(open_btn)
+
+        new_btn = QPushButton("NEW KEY")
+        new_btn.setFixedHeight(32)
+        new_btn.setFont(tech_font(8, QFont.Weight.Bold, 30))
         new_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         new_btn.setStyleSheet(f"""
             QPushButton {{
-                background: rgba(0, 240, 255, 0.10); color: {C.PRI};
-                border: 1px solid {C.PRI_DIM}; border-radius: 5px;
+                background: rgba(0, 240, 255, 0.08); color: {C.PRI_DIM};
+                border: 1px solid {C.BORDER_A}; border-radius: 5px;
             }}
-            QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; }}
+            QPushButton:hover {{ background: {C.PRI_GHO}; border: 1px solid {C.PRI}; color: {C.PRI}; }}
         """)
         new_btn.clicked.connect(self._refresh_key)
         btn_row.addWidget(new_btn)
 
         close_btn = QPushButton("DISMISS")
-        close_btn.setFixedHeight(34)
+        close_btn.setFixedHeight(32)
         close_btn.setFont(tech_font(8, QFont.Weight.Bold))
         close_btn.setCursor(Qt.CursorShape.PointingHandCursor)
         close_btn.setStyleSheet(f"""
@@ -6238,6 +6257,26 @@ class RemoteKeyOverlay(QWidget):
         self._ctimer.timeout.connect(self._tick)
         self._ctimer.start(1000)
         self._tick()
+
+    def _open_in_browser(self) -> None:
+        target = self._desktop_url or self._auto_login_url or self._manual_url
+        if target:
+            try:
+                import webbrowser
+                webbrowser.open(target)
+            except Exception:
+                pass
+
+    def _render_links(self) -> None:
+        if self._manual_url:
+            self._url_lbl.setText(f'<a href="{self._manual_url}" style="color: {C.PRI}; text-decoration: underline;">{self._manual_url}</a>')
+        else:
+            self._url_lbl.setText("—")
+        link = self._desktop_url or self._auto_login_url
+        if link:
+            self._desktop_lbl.setText(f'<a href="{link}" style="color: {C.ACC}; text-decoration: underline;">{link}</a>')
+        else:
+            self._desktop_lbl.setText("—")
 
     def set_new_key_callback(self, fn) -> None:
         self._on_new_key = fn
@@ -6314,11 +6353,10 @@ class RemoteKeyOverlay(QWidget):
                 manual = result[3] if len(result) >= 4 else url
                 localhost_url = result[4] if len(result) >= 5 else None
                 self._manual_url     = manual or url
-                self._url_lbl.setText(self._manual_url)
-                self._key_lbl.setText(key)
-                if localhost_url is not None:
-                    self._desktop_lbl.setText(localhost_url)
+                self._desktop_url    = localhost_url or ""
                 self._auto_login_url = auto
+                self._key_lbl.setText(key)
+                self._render_links()
                 self._update_qr(auto or url)
                 self._expiry = time.time() + 600
                 self._key_lbl.setStyleSheet(f"""
@@ -8246,9 +8284,6 @@ class MainWindow(QMainWindow):
         url    = result[0]
         key    = result[1]
         auto   = result[2] if len(result) >= 3 else ""
-        manual = result = result[0]
-        key    = result[1]
-        auto   = result[2] if len(result) >= 3 else ""
         manual = result[3] if len(result) >= 4 else url
         localhost_url = result[4] if len(result) >= 5 else None
         if self._remote_overlay:
@@ -8266,7 +8301,8 @@ class MainWindow(QMainWindow):
         ov.closed.connect(lambda: setattr(self, '_remote_overlay', None))
         ov.show()
         self._remote_overlay = ov
-        self._log.append_log(f"SYS: Remote key generated — manual: {manual or url}")
+        link = auto or localhost_url or manual or url
+        self._log.append_log(f"SYS: Remote Uplink live — View: {link} (Key: {key})")
 
     # ── Auto-start ──────────────────────────────────────────────────────────────
 

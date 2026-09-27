@@ -977,10 +977,12 @@ class JarvisLive:
         key    = self._dashboard.new_key()
         url    = self._dashboard.get_url()
         manual = self._dashboard.get_manual_url()
-        # For desktop debugging, also provide a localhost URL (same as manual for now)
-        localhost_url = manual
-        self.ui.write_log(f"DEBUG: Remote key generated - URL: {url}, Manual: {manual}, Localhost: {localhost_url}")
-        return url, key, f"{url}/auto-login?key={key}", manual, localhost_url
+        proto  = "https" if self._dashboard._ssl_enabled() else "http"
+        from dashboard.server import PORT
+        localhost_url = f"{proto}://localhost:{PORT}/auto-login?key={key}"
+        auto_url = f"{url}/auto-login?key={key}"
+        self.ui.write_log(f"SYS: Remote Uplink initialized — LAN: {auto_url} | Local: {localhost_url}")
+        return url, key, auto_url, manual, localhost_url
 
     def _on_text_command(self, text: str):
         if not self._loop:

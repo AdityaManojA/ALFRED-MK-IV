@@ -178,21 +178,81 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ALFRED is engineered for fluid, natural conversational operations across all desktop domains. Below is a categorized reference of the most useful voice commands, trigger patterns, and operational descriptions:
 
-### 🎵 1. Tactical Audio Core (TRON Background Engine)
-*Voice control over the local tactical audio engine (`actions/audio_core.py`)*
+### 👁️ 1. Desktop Automation, Screen & Multimodal Vision
+*Physical input, visual grounding, and multi-monitor capture (`actions/computer_control.py`, `actions/screen_find.py`, `actions/screen_processor.py`)*
 
 | Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
 |---|---|---|
-| *"Pause audio core"* / *"Stop audio core"* | Instantly pauses the background TRON soundtrack without touching external music/Spotify. | `action="pause"` |
-| *"Resume audio core"* / *"Play audio core"* | Resumes or starts the TRON ambient soundtrack in continuous playback loop. | `action="resume"` |
-| *"Audio core volume to 25%"* | Sets the baseline gain of the ambient soundtrack (0% to 100%). Speech ducking automatically scales to 50% of this target. | `action="set_volume"`, `volume_percent=25` |
-| *"Audio core status"* | Queries active playback state, currently loaded track, and volume level. | `action="status"` |
-| *"Audio core next"* / *"Audio core previous"* | Advances to next or returns to previous track in the local ambient playlist. | `action="next"` / `action="prev"` |
-| *"Restore TRON music"* / *"Default score"* | Clears external streaming and restores Daft Punk's *The Son of Flynn* as active score. | `action="restore_tron"` |
+| *"Take a screenshot"* / *"Capture screen"* | Captures all active displays at full resolution, saving to Desktop and streaming an inline preview + download link to your phone remote. | Dual-destination dispatch |
+| *"Look at my screen and [question]"* | Multimodal visual inspection (e.g., *"What error is showing in my terminal?"*, *"Summarize the text on my screen"*). | Dynamic visual context injection |
+| *"Look at my camera"* / *"Check webcam"* | Grabs a live single-frame capture from the primary webcam for situational awareness. | Single-frame camera feed |
+| *"Click [Button / Icon / Text]"* | Runs local RapidOCR + ONNX vision (<150ms) to ground the element's coordinates and dispatches an authentic OS click. | e.g., *"Click Save"*, *"Click Submit"* |
+| *"Scroll down"* / *"Scroll up"* | Smooth mouse wheel scrolling on the active focused window. | Dynamic mouse wheel emulation |
+| *"Copy to clipboard"* / *"What's in my clipboard?"* | Reads or injects formatted text into the OS system clipboard. | Full clipboard bridge |
 
 ---
 
-### 🎧 2. Spotify AI Agent & Music Streaming
+### ⚙️ 2. Operating System, Hardware Settings & Applications
+*OS management, process execution, and system metrics (`actions/open_app.py`, `actions/computer_settings.py`, `actions/system_monitor.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Open [Application Name]"* | Resolves and launches desktop applications (e.g., *"Open VS Code"*, *"Open Chrome"*, *"Launch Terminal"*, *"Open Steam"*). | OS-aware executable resolver |
+| *"Set volume to 50%"* / *"Mute volume"* | Sets or mutes system master output volume via low-level OS audio endpoints (`pycaw`/`pulsectl`). | Master OS volume |
+| *"Set brightness to 80%"* | Modifies primary display backlight level directly. | Hardware display control |
+| *"System status"* / *"Check resources"* | Reports real-time CPU utilization, RAM usage, storage space, and thermal telemetry. | Live system telemetry |
+| *"Watch process [Name]"* | Engages the active watchdog daemon to alert on runaway CPU utilization (>90%) or unapproved socket egress. | Security watchdog |
+| *"Lock workstation"* / *"Sleep PC"* | Dispatches OS-native workstation lock or system sleep state commands. | Windows/macOS/Linux power state |
+
+---
+
+### ⚡ 3. Compound Protocols & Workflow Macros
+*Macro playbook engine executing multi-step YAML workflows (`actions/protocol_engine.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"[Custom Trigger Word]"* | Activates an automated compound playbook from `config/protocols.yaml` (e.g. saying *"FCC CLAUDE"* opens admin terminals, launches servers, and starts Claude). | Multi-step macro dispatch |
+| *"Let's create a workflow"* / *"Create a protocol"* | Launches an interactive conversational formulation protocol to create a new multi-step macro, protected by an on-screen confirmation gate. | Interactive workflow builder |
+
+---
+
+### 🧠 4. Memory, History & Universal Reversibility
+*Long-term knowledge storage, fact recall, and undo stack (`core/undo.py`, `actions/memory_manager.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Remember that [fact]"* | Encrypts and writes permanent context to `memory/long_term.json` (e.g. *"Remember that the flight confirmation code is XR-902"*). | O(N log N) persistent memory |
+| *"What do you remember about [topic]?"* | Performs sub-millisecond semantic keyword recall from long-term memory. | Sub-millisecond recall |
+| *"Undo"* / *"Revert that"* / *"Put it back"* | Rolls back the most recent reversible action (file creation, move, write, rename, or system setting change). | Universal action journal stack |
+| *"Wipe conversation"* / *"Clear chat"* | Clears the active conversational context window and HUD chat terminal cleanly. | Zero residual context reset |
+
+---
+
+### 📰 5. Intelligence, Briefings, News & Weather
+*Real-time web research, synthesized daily briefs, and meteorological reports (`actions/daily_brief.py`, `actions/web_search.py`, `actions/weather_report.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Daily briefing"* / *"What's my brief today?"* | Synthesizes weather, schedule, reminders, and top headlines into an executive morning briefing. | Multi-tier daily brief |
+| *"Update my daily briefing"* | Initiates conversational directive customizer to modify preferred news topics, categories, or location preferences in permanent memory. | Cache invalidation + memory update |
+| *"Search the web for [query]"* | Runs parallel multi-engine web search with live scraping and deduplicated synthesis. | Real-time search |
+| *"Latest news on [topic]"* | Fetches and summarizes breaking news on a specific subject, industry, or company. | Live news scraper |
+| *"What is the weather in [city]?"* | Delivers accurate meteorological conditions, temperature, humidity, and forecasts. | Live weather report |
+
+---
+
+### 📱 6. Quantum Mobile Remote & Web Telemetry Uplink
+*Encrypted remote control, mobile camera pairing, and live dashboard (`dashboard/server.py`, `ui.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Remote control"* / *"Mobile uplink"* | Launches on-screen QR code and direct browser link to pair mobile device with encrypted local dashboard. | Instant auto-login link |
+| *"Send screenshot to phone"* | Broadcasts high-resolution multi-monitor screenshot thumbnail and download link to connected phone session. | Mobile push preview |
+| Remote Web Audio Streaming | Stream low-latency bidirectional voice directly to/from phone browser via secure WebSocket (`/ws/audio`). | WebAudio mobile gateway |
+
+---
+
+### 🎧 7. Spotify AI Agent & Music Streaming
 *Autonomous Web API + native hardware OS control (`actions/spotify_control.py`)*
 
 | Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
@@ -210,70 +270,21 @@ ALFRED is engineered for fluid, natural conversational operations across all des
 
 ---
 
-### 👁️ 3. Desktop Automation, Screen & Multimodal Vision
-*Physical input, visual grounding, and multi-monitor capture (`actions/computer_control.py`, `actions/screen_find.py`, `actions/screen_processor.py`)*
+### 🎵 8. Tactical Audio Core (TRON Background Engine)
+*Voice control over the local tactical audio engine (`actions/audio_core.py`)*
 
 | Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
 |---|---|---|
-| *"Take a screenshot"* / *"Capture screen"* | Captures all active displays at full resolution, saving to Desktop and streaming an inline preview + download link to your phone remote. | Dual-destination dispatch |
-| *"Look at my screen and [question]"* | Multimodal visual inspection (e.g., *"What error is showing in my terminal?"*, *"Summarize the text on my screen"*). | Dynamic visual context injection |
-| *"Look at my camera"* / *"Check webcam"* | Grabs a live single-frame capture from the primary webcam for situational awareness. | Single-frame camera feed |
-| *"Click [Button / Icon / Text]"* | Runs local RapidOCR + ONNX vision (<150ms) to ground the element's coordinates and dispatches an authentic OS click. | e.g., *"Click Save"*, *"Click Submit"* |
-| *"Scroll down"* / *"Scroll up"* | Smooth mouse wheel scrolling on the active focused window. | Dynamic mouse wheel emulation |
-| *"Copy to clipboard"* / *"What's in my clipboard?"* | Reads or injects formatted text into the OS system clipboard. | Full clipboard bridge |
+| *"Pause audio core"* / *"Stop audio core"* | Instantly pauses the background TRON soundtrack without touching external music/Spotify. | `action="pause"` |
+| *"Resume audio core"* / *"Play audio core"* | Resumes or starts the TRON ambient soundtrack in continuous playback loop. | `action="resume"` |
+| *"Audio core volume to 25%"* | Sets the baseline gain of the ambient soundtrack (0% to 100%). Speech ducking automatically scales to 50% of this target. | `action="set_volume"`, `volume_percent=25` |
+| *"Audio core status"* | Queries active playback state, currently loaded track, and volume level. | `action="status"` |
+| *"Audio core next"* / *"Audio core previous"* | Advances to next or returns to previous track in the local ambient playlist. | `action="next"` / `action="prev"` |
+| *"Restore TRON music"* / *"Default score"* | Clears external streaming and restores Daft Punk's *The Son of Flynn* as active score. | `action="restore_tron"` |
 
 ---
 
-### ⚙️ 4. Operating System, Hardware Settings & Applications
-*OS management, process execution, and system metrics (`actions/open_app.py`, `actions/computer_settings.py`, `actions/system_monitor.py`)*
-
-| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
-|---|---|---|
-| *"Open [Application Name]"* | Resolves and launches desktop applications (e.g., *"Open VS Code"*, *"Open Chrome"*, *"Launch Terminal"*, *"Open Steam"*). | OS-aware executable resolver |
-| *"Set volume to 50%"* / *"Mute volume"* | Sets or mutes system master output volume via low-level OS audio endpoints (`pycaw`/`pulsectl`). | Master OS volume |
-| *"Set brightness to 80%"* | Modifies primary display backlight level directly. | Hardware display control |
-| *"System status"* / *"Check resources"* | Reports real-time CPU utilization, RAM usage, storage space, and thermal telemetry. | Live system telemetry |
-| *"Watch process [Name]"* | Engages the active watchdog daemon to alert on runaway CPU utilization (>90%) or unapproved socket egress. | Security watchdog |
-| *"Lock workstation"* / *"Sleep PC"* | Dispatches OS-native workstation lock or system sleep state commands. | Windows/macOS/Linux power state |
-
----
-
-### ⚡ 5. Compound Protocols & Workflow Macros
-*Macro playbook engine executing multi-step YAML workflows (`actions/protocol_engine.py`)*
-
-| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
-|---|---|---|
-| *"[Custom Trigger Word]"* | Activates an automated compound playbook from `config/protocols.yaml` (e.g. saying *"FCC CLAUDE"* opens admin terminals, launches servers, and starts Claude). | Multi-step macro dispatch |
-| *"Let's create a workflow"* / *"Create a protocol"* | Launches an interactive conversational formulation protocol to create a new multi-step macro, protected by an on-screen confirmation gate. | Interactive workflow builder |
-
----
-
-### 📰 6. Intelligence, Briefings, News & Weather
-*Real-time web research, synthesized daily briefs, and meteorological reports (`actions/daily_brief.py`, `actions/web_search.py`, `actions/weather_report.py`)*
-
-| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
-|---|---|---|
-| *"Daily briefing"* / *"What's my brief today?"* | Synthesizes weather, schedule, reminders, and top headlines into an executive morning briefing. | Multi-tier daily brief |
-| *"Update my daily briefing"* | Initiates conversational directive customizer to modify preferred news topics, categories, or location preferences in permanent memory. | Cache invalidation + memory update |
-| *"Search the web for [query]"* | Runs parallel multi-engine web search with live scraping and deduplicated synthesis. | Real-time search |
-| *"Latest news on [topic]"* | Fetches and summarizes breaking news on a specific subject, industry, or company. | Live news scraper |
-| *"What is the weather in [city]?"* | Delivers accurate meteorological conditions, temperature, humidity, and forecasts. | Live weather report |
-
----
-
-### 🧠 7. Memory, History & Universal Reversibility
-*Long-term knowledge storage, fact recall, and undo stack (`core/undo.py`, `actions/memory_manager.py`)*
-
-| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
-|---|---|---|
-| *"Remember that [fact]"* | Encrypts and writes permanent context to `memory/long_term.json` (e.g. *"Remember that the flight confirmation code is XR-902"*). | O(N log N) persistent memory |
-| *"What do you remember about [topic]?"* | Performs sub-millisecond semantic keyword recall from long-term memory. | Sub-millisecond recall |
-| *"Undo"* / *"Revert that"* / *"Put it back"* | Rolls back the most recent reversible action (file creation, move, write, rename, or system setting change). | Universal action journal stack |
-| *"Wipe conversation"* / *"Clear chat"* | Clears the active conversational context window and HUD chat terminal cleanly. | Zero residual context reset |
-
----
-
-### 🛡️ 8. Chassis Insignia & Assistant Customization
+### 🛡️ 9. Chassis Insignia & Assistant Customization
 *Dynamic UI hot-swapping and asset customization (`actions/update_app_icon.py`)*
 
 | Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
@@ -512,7 +523,7 @@ ALFRED incorporates an OS security and performance watchdog daemon that actively
 ##  15. Bug Fixes & Stability Updates
 
 * **Tactical Audio Core Voice Control**: Introduced dedicated `actions/audio_core.py` action tool and UI methods (`pause_audio_core`, `resume_audio_core`), allowing users to control the ambient TRON Legacy score directly (*"pause audio core"*, *"resume audio core"*, *"audio core volume to 25%"*) without conflicting with Spotify routing.
-* **Audio Starvation & Microphone Breakup Fix**: Reconfigured `sd.RawOutputStream` in `main.py` with `blocksize=0` for hardware-native buffer sizing, implemented ~150ms dynamic jitter pre-buffering on utterance starts, and added a 3-count debounce grace period on `is_speaking`. This eliminates PortAudio buffer starvation on Windows, crackling, and mic self-collision flip-flops.
+* **Audio Starvation & Microphone Breakup Fix**: Reconfigured `sd.RawOutputStream` in `main.py` with `blocksize=0` for hardware-native buffer sizing, implemented dynamic jitter pre-buffering on utterance starts, and added a 3-count debounce grace period on `is_speaking`. This eliminates PortAudio buffer starvation on Windows, crackling, and mic self-collision flip-flops.
 * **News Reading Interruption Leak Elimination**: Implemented strict cancellation flags (`self._briefing_cancelled = True`) and active background task cancellation in `main.py`. Interrupting ALFRED during the morning briefing or background topic monitoring now instantly silences playback and permanently prevents residual news paragraphs from resuming minutes later.
 * **Spotify Media Toggle Inversion & Playback Loops**: Replaced blind `VK_MEDIA_PLAY_PAUSE (0xB3)` toggle with explicit Windows `WM_APPCOMMAND` messages (`APPCOMMAND_MEDIA_PAUSE=47`, `APPCOMMAND_MEDIA_PLAY=46`), eliminating recursive play/pause loops during voice commands.
 * **Spotify Acoustic Feedback Elimination**: Decoupled synchronous TTS `speak()` calls from `actions/spotify_control.py`, preventing the microphone from picking up self-speech and triggering secondary duplicate tool calls.
@@ -520,6 +531,21 @@ ALFRED incorporates an OS security and performance watchdog daemon that actively
 * **Windows Modern Audio Endpoint Compatibility**: Fixed volume control in `actions/computer_settings.py` to interface with modern `pycaw.EndpointVolume` scalar setters, resolving attribute errors and eliminating PyAutoGUI mouse failsafe triggers.
 * **Path Guard Word Filtering**: Refined `core/path_guard.py` to prevent false-positive path resolution on plain single-word tool parameters (such as `"Save"` or `"File"`).
 * **HUD Volume Popup Geometry**: Resolved `QPoint` namespace issue during volume popup positioning in `ui.py`.
+* **Mobile Remote Uplink & Web Dashboard Repair**:
+  * **Tuple Unpacking & Argument Serialization Bug**: Eliminated a severe unpacking defect in `MainWindow._open_remote` (`ui.py`) where `manual = result = result[0]` inadvertently reassigned the return tuple to the URL string, causing subsequent indices to extract single letters (`'t'`, `'t'`, `'p'`, `':'`) and corrupting the overlay's QR code, manual coordinates, desktop link, and key.
+  * **Clickable Hyperlinks & One-Click Browser Launch**: Upgraded `RemoteKeyOverlay` with `Qt.TextInteractionFlag.LinksAccessibleByMouse` and rich HTML anchors (`setOpenExternalLinks(True)`). Added an **`↗ OPEN IN BROWSER`** button for instant one-click dashboard launching on the host machine.
+  * **Protocol Schema Enforcement**: Updated `dashboard/server.py` (`get_manual_url`) to dynamically prepend `http://` or `https://` schemas, ensuring standard URI resolution across mobile browsers and QR scanners.
+  * **Instant Camera Pairing via Auto-Login Tokens**: Configured `main.py` (`_make_remote_key`) to pass full `/auto-login?key={key}` paths to both local LAN and localhost links, allowing mobile optical sensors to immediately recognize the QR code as a web view link and pair seamlessly.
+* **Audio Stutter, Driver Jitter & 30-Second Frame Drop Elimination**:
+  * **COM & NVML Driver Handle Caching**: Prevented periodic 40–100ms thread hangs during metric polling by persisting `wmi.WMI` COM namespaces and `pynvml.nvmlInit()` GPU device handles across calls in `actions/system_monitor.py`.
+  * **Qt UI Thread Offload**: Decoupled heavy OS process counting (`len(psutil.pids())`) and boot time queries from Qt's 500ms main timer thread, shifting them to the background `_SysMetrics` daemon in `ui.py` to keep GUI frame rates at a consistent 60 FPS.
+  * **PortAudio Stream Jitter Cushion & High-Latency Buffering**: Configured PortAudio output stream with `latency="high"` and elevated utterance start pre-buffering cushion to 250ms in `main.py`, absorbing Windows thread scheduling delays and eliminating voice dropouts.
+  * **Python Generational GC Throttling & Idle Maintenance**: Raised Python GC generation 0/1/2 collection thresholds to `(70000, 15, 15)` to avoid stop-the-world garbage collection pauses during active voice streaming or visual rendering, coupled with an idle-only background GC manager in `main.py`.
+* **Persona Directives, Speech Debounce & Cognitive Trace**:
+  * **Quintessential British Butler Persona**: Overhauled master system prompt directives in `core/prompt.txt` to fully embody Alfred Pennyworth — dignified servitude, razor-sharp dry British wit, impeccable deference to "Master Wayne", and crisp, succinct verbal delivery.
+  * **STT Speech Debounce & Instant Interrupt Bypass**: Raised speech completion debounce threshold to `FINISH_MS = 900` in `core/local_stt.py` to prevent premature sentence truncation, while retaining instant interrupt capabilities on stop/wake keywords.
+  * **Cognitive Trace (Real-Time Chain-of-Thought Streamer)**: Introduced an interactive `THINKING TRACE: ON/OFF` toggle button above the HUD chat in `ui.py`, paired with a dedicated thinking streaming listener in `main.py` to display internal reasoning steps from thinking-enabled models.
+  * **Protocol Engine Confirmation Loop Prevention**: Fixed `actions/protocol_engine.py` to bypass confirmation gates on non-destructive workflow creation (`ask_confirmation=False`), resolving recursive protocol generation loops.
 
 ---
 
@@ -675,7 +701,7 @@ python main.py
 ##  19. Knowledge Graph (`graphify`)
 
 This codebase is indexed with a persistent **GraphRAG Knowledge Graph** located in `graphify-out/`:
-* **2,439 nodes** & **4,776 relationships** mapped across **134 semantic functional communities**.
+* **2,640 nodes** & **5,146 relationships** mapped across **150 semantic functional communities**.
 * Interactive navigable graph visualization: [`graphify-out/graph.html`](file:///d:/Projects/Alfred-Mark-IV/graphify-out/graph.html).
 * Architectural breakdown: [`graphify-out/GRAPH_REPORT.md`](file:///d:/Projects/Alfred-Mark-IV/graphify-out/GRAPH_REPORT.md).
 * **Dynamic Knowledge Graph Management**: Real-time graph mutation, entity/relationship addition, exponential decay, and 2-hop querying via `memory/graph_manager.py` for persistent knowledge evolution and context-aware reasoning.
