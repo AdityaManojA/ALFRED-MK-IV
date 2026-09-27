@@ -1,4 +1,4 @@
-﻿from __future__ import annotations
+from __future__ import annotations
 
 import json
 import math
@@ -151,6 +151,10 @@ class TronScoreBackgroundPlayer(QObject):
         self._is_speaking_ducked = False
         self._is_paused          = False
 
+        self._source_mode        = "tron"      # "tron" (local background score) | "spotify"
+        self._default_tron_track: Path | None = None
+        self._spotify_track: dict             = {}
+
         self._player: QMediaPlayer | None = None
         self._audio: QAudioOutput | None  = None
         self._current_path: Path | None   = None
@@ -179,6 +183,7 @@ class TronScoreBackgroundPlayer(QObject):
         ]
         default_track = next((p for p in _candidates if p.exists()), None)
         if default_track:
+            self._default_tron_track = default_track
             self._playlist.append(default_track)
 
         # 2. Load saved playlist from config
@@ -186,7 +191,7 @@ class TronScoreBackgroundPlayer(QObject):
         last_track_str = None
         if cfg_file.exists():
             try:
-                data = json.loads(cfg_file.read_text(encoding="utf-8"))
+                data = json.loads(cfg_file.read_text(encoding="utf-8-sig"))
                 for p_str in data.get("tracks", []):
                     p = Path(p_str)
                     if p.exists() and p not in self._playlist:
@@ -311,7 +316,42 @@ class TronScoreBackgroundPlayer(QObject):
             self._current_vol += step
             self._audio.setVolume(max(0.0, min(1.0, self._current_vol)))
 
+    def source_mode(self) -> str:
+        return self._source_mode
+
+    def spotify_track(self) -> dict:
+        return dict(self._spotify_track)
+
+    def set_spotify_playback(self, title: str, artist: str = "", uri: str = ""):
+        """Called when Spotify plays a track. Pauses Tron background music, sets Spotify as active source."""
+        self._source_mode = "spotify"
+        self._spotify_track = {"title": title, "artist": artist, "uri": uri}
+        if self._player:
+            try:
+                self._player.pause()
+            except Exception:
+                pass
+        self._is_paused = False
+        display_name = f"SPOTIFY: {title}" + (f" ({artist})" if artist else "")
+        self.track_changed.emit(display_name, uri or "spotify")
+        self.playback_state_changed.emit(True)
+
+    def clear_spotify_and_restore_tron(self):
+        """Restores Tron legacy score as the default active audio."""
+        self._source_mode = "tron"
+        self._spotify_track = {}
+        if self._default_tron_track and self._default_tron_track.exists():
+            self.load_track(self._default_tron_track, auto_play=True)
+        elif self._playlist:
+            self.load_track(self._playlist[0], auto_play=True)
+
     def toggle_play(self):
+        if self._source_mode == "spotify":
+            if self._is_paused:
+                self.play()
+            else:
+                self.pause()
+            return
         if not self._player:
             return
         if self._is_paused:
@@ -320,6 +360,16 @@ class TronScoreBackgroundPlayer(QObject):
             self.pause()
 
     def play(self):
+        if self._source_mode == "spotify":
+            self._is_paused = False
+            try:
+                from actions.spotify_control import control_playback
+                control_playback("resume")
+            except Exception:
+                pass
+            self.playback_state_changed.emit(True)
+            return
+
         if not self._player:
             return
         self._is_paused = False
@@ -330,6 +380,16 @@ class TronScoreBackgroundPlayer(QObject):
         self.playback_state_changed.emit(True)
 
     def pause(self):
+        if self._source_mode == "spotify":
+            self._is_paused = True
+            try:
+                from actions.spotify_control import control_playback
+                control_playback("pause")
+            except Exception:
+                pass
+            self.playback_state_changed.emit(False)
+            return
+
         if not self._player:
             return
         self._is_paused = True
@@ -339,7 +399,36 @@ class TronScoreBackgroundPlayer(QObject):
         self._player.pause()
         self.playback_state_changed.emit(False)
 
+    def pause_core(self):
+        """Specifically pause the local TRON audio core player regardless of mode."""
+        self._is_paused = True
+        self._target_vol = 0.0
+        if self._player:
+            self._player.pause()
+        self.playback_state_changed.emit(False)
+
+    def resume_core(self):
+        """Specifically resume/play the local TRON audio core player."""
+        self._source_mode = "tron"
+        self._is_paused = False
+        if not self._player and (self._default_tron_track or self._playlist):
+            self.load_track(self._default_tron_track or self._playlist[0], auto_play=True)
+        elif self._player:
+            self._player.play()
+            self._target_vol = self.DUCKED_VOL if self._is_speaking_ducked else self._normal_vol
+            if self._fade_timer and not self._fade_timer.isActive():
+                self._fade_timer.start()
+            self.playback_state_changed.emit(True)
+
     def next_track(self):
+        if self._source_mode == "spotify":
+            try:
+                from actions.spotify_control import control_playback
+                control_playback("skip_next")
+            except Exception:
+                pass
+            return
+
         if not self._playlist:
             return
         try:
@@ -350,6 +439,14 @@ class TronScoreBackgroundPlayer(QObject):
             pass
 
     def prev_track(self):
+        if self._source_mode == "spotify":
+            try:
+                from actions.spotify_control import control_playback
+                control_playback("skip_previous")
+            except Exception:
+                pass
+            return
+
         if not self._playlist:
             return
         try:
@@ -360,13 +457,21 @@ class TronScoreBackgroundPlayer(QObject):
             pass
 
     def is_playing(self) -> bool:
+        if self._source_mode == "spotify":
+            return not self._is_paused
         return (not self._is_paused) and (self._player is not None)
 
     def current_track_name(self) -> str:
-        return self._current_path.name if self._current_path else "NO TRACK"
+        if self._source_mode == "spotify" and self._spotify_track:
+            return self._spotify_track.get("title", "Spotify Track")
+        return self._current_path.name if self._current_path else "The Son of Flynn (From TRON Legacy Score).mp3"
 
     def current_track_stem(self) -> str:
-        return self._current_path.stem if self._current_path else "NO TRACK"
+        if self._source_mode == "spotify" and self._spotify_track:
+            title = self._spotify_track.get("title", "Spotify Track")
+            artist = self._spotify_track.get("artist", "")
+            return f"SPOTIFY: {title} ({artist})" if artist else f"SPOTIFY: {title}"
+        return self._current_path.stem if self._current_path else "The Son of Flynn"
 
     def playlist(self) -> list[Path]:
         return list(self._playlist)
@@ -2817,14 +2922,25 @@ class TacticalAudioPlayerWidget(QWidget):
     def _refresh_combo(self):
         self._combo.blockSignals(True)
         self._combo.clear()
+
+        # If Spotify is active, add it to the top of the selector
+        if self._engine.source_mode() == "spotify" and self._engine.spotify_track():
+            stitle = self._engine.current_track_stem()
+            self._combo.addItem(f"◈ {stitle}", "spotify:current")
+
         plist = self._engine.playlist()
         curr_idx = 0
         for idx, p in enumerate(plist):
-            self._combo.addItem(p.stem, str(p.resolve()))
-            if self._engine._current_path and p.resolve() == self._engine._current_path.resolve():
-                curr_idx = idx
-        if plist:
+            label = "◈ TRON Legacy Score" if "The Son of Flynn" in p.stem else p.stem
+            self._combo.addItem(label, str(p.resolve()))
+            if self._engine.source_mode() != "spotify" and self._engine._current_path and p.resolve() == self._engine._current_path.resolve():
+                curr_idx = self._combo.count() - 1
+
+        if self._engine.source_mode() == "spotify":
+            self._combo.setCurrentIndex(0)
+        elif plist:
             self._combo.setCurrentIndex(curr_idx)
+
         self._combo.setStyleSheet(f"""
             QComboBox {{
                 background: {C.PANEL};
@@ -2846,9 +2962,16 @@ class TacticalAudioPlayerWidget(QWidget):
         self._combo.blockSignals(False)
 
     def _on_combo_changed(self, idx: int):
-        plist = self._engine.playlist()
-        if 0 <= idx < len(plist):
-            self._engine.load_track(plist[idx], auto_play=True)
+        data = self._combo.itemData(idx)
+        if not data:
+            return
+        if data == "spotify:current":
+            return
+        # If user switches to TRON / local playlist track from combo
+        p = Path(data)
+        if p.exists():
+            self._engine._source_mode = "tron"
+            self._engine.load_track(p, auto_play=True)
 
     def _on_load_clicked(self):
         file_path, _ = QFileDialog.getOpenFileName(
@@ -2858,6 +2981,7 @@ class TacticalAudioPlayerWidget(QWidget):
             "Audio Files (*.mp3 *.wav *.ogg *.m4a *.flac);;All Files (*.*)",
         )
         if file_path:
+            self._engine._source_mode = "tron"
             self._engine.add_and_play(file_path)
 
     def _on_track_changed(self, stem: str, path: str):
@@ -2865,6 +2989,8 @@ class TacticalAudioPlayerWidget(QWidget):
         self._track_lbl.setToolTip(path)
         self._refresh_combo()
         self._update_badge(self._engine._is_speaking_ducked, self._engine.base_volume())
+        if hasattr(self, "_btn_play"):
+            self._btn_play.set_mode("pause" if self._engine.is_playing() else "play")
 
     def _on_playback_state_changed(self, is_playing: bool):
         self._btn_play.set_mode("pause" if is_playing else "play")
@@ -8720,6 +8846,58 @@ class MainWindow(QMainWindow):
         self.hud.speaking = (state == "SPEAKING")
         if hasattr(self, "_bg_music") and self._bg_music:
             self._bg_music.set_ducked(state == "SPEAKING")
+
+    def set_spotify_playback(self, title: str, artist: str = "", uri: str = ""):
+        """Update bottom-left tactical audio player to display and control Spotify playback."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            self._bg_music.set_spotify_playback(title, artist, uri)
+
+    def restore_tron_music(self):
+        """Restore default TRON Legacy score on bottom-left tactical audio player."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            self._bg_music.clear_spotify_and_restore_tron()
+
+    def pause_audio_core(self) -> bool:
+        """Pause the Audio Core (TRON background music engine)."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            if hasattr(self._bg_music, "pause_core"):
+                self._bg_music.pause_core()
+            else:
+                self._bg_music.pause()
+            return True
+        return False
+
+    def resume_audio_core(self) -> bool:
+        """Resume or play the Audio Core (TRON background music engine)."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            if hasattr(self._bg_music, "resume_core"):
+                self._bg_music.resume_core()
+            elif self._bg_music.source_mode() != "tron":
+                self._bg_music.clear_spotify_and_restore_tron()
+            else:
+                self._bg_music.play()
+            return True
+        return False
+
+    def set_audio_core_volume(self, volume_percent: int) -> float:
+        """Set base volume of the Audio Core (0 to 100)."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            vol = max(0.0, min(1.0, float(volume_percent) / 100.0))
+            self._bg_music.set_base_volume(vol)
+            return vol
+        return 0.10
+
+    def get_audio_core_status(self) -> dict:
+        """Get status of the Audio Core."""
+        if hasattr(self, "_bg_music") and self._bg_music:
+            track_name = self._bg_music._current_path.name if self._bg_music._current_path else "The Son of Flynn"
+            return {
+                "is_playing": self._bg_music.is_playing(),
+                "volume": int(self._bg_music.base_volume() * 100),
+                "source_mode": self._bg_music.source_mode(),
+                "track": track_name,
+            }
+        return {"is_playing": False, "volume": 10, "source_mode": "tron", "track": "The Son of Flynn"}
 
     def closeEvent(self, e):
         try:

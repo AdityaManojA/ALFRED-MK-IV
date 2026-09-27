@@ -1,4 +1,4 @@
-﻿#  ALFRED — MARK III (Wayne Protocol Edition)
+#  ALFRED — MARK-IV (Wayne Protocol Edition)
 ### Autonomous Multimodal AI Desktop Assistant & Tactical Terminal
 **Architect & Lead Creator:** **ADITYA MANOJ**
 
@@ -151,7 +151,115 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  3. Real-Time Multimodal Intelligence & Dual Audio Engine
+## 🎙️ 3. Master Tactical Voice Command Codex & Operational Handbook
+
+ALFRED is engineered for fluid, natural conversational operations across all desktop domains. Below is a categorized reference of the most useful voice commands, trigger patterns, and operational descriptions:
+
+### 🎵 1. Tactical Audio Core (TRON Background Engine)
+*Voice control over the local tactical audio engine (`actions/audio_core.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Pause audio core"* / *"Stop audio core"* | Instantly pauses the background TRON soundtrack without touching external music/Spotify. | `action="pause"` |
+| *"Resume audio core"* / *"Play audio core"* | Resumes or starts the TRON ambient soundtrack in continuous playback loop. | `action="resume"` |
+| *"Audio core volume to 25%"* | Sets the baseline gain of the ambient soundtrack (0% to 100%). Speech ducking automatically scales to 50% of this target. | `action="set_volume"`, `volume_percent=25` |
+| *"Audio core status"* | Queries active playback state, currently loaded track, and volume level. | `action="status"` |
+| *"Audio core next"* / *"Audio core previous"* | Advances to next or returns to previous track in the local ambient playlist. | `action="next"` / `action="prev"` |
+| *"Restore TRON music"* / *"Default score"* | Clears external streaming and restores Daft Punk's *The Son of Flynn* as active score. | `action="restore_tron"` |
+
+---
+
+### 🎧 2. Spotify AI Agent & Music Streaming
+*Autonomous Web API + native hardware OS control (`actions/spotify_control.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Play songs"* / *"Play some music"* | Initiates Spotify playback with intelligent resume or top queue suggestions (default music router). | `action="play"` |
+| *"Play [Track / Artist / Album]"* | Instant catalog search and streaming (e.g., *"Play Jane by The Long Faces"*, *"Play Starboy"*, *"Play Daft Punk Discovery"*). | `action="play"`, `query="..."` |
+| *"Pause the music"* / *"Stop"* | Pauses Spotify playback cleanly via explicit OS application commands (no toggle inversion). | `action="pause"` |
+| *"Next track"* / *"Skip song"* | Advances to the next track in the user's Spotify queue. | `action="skip_next"` |
+| *"Previous song"* / *"Go back a track"* | Rewinds or returns to the preceding Spotify track. | `action="skip_previous"` |
+| *"Queue [Track Name]"* | Injects the requested track directly into the active Spotify playback queue without interrupting current song. | `action="queue"`, `query="..."` |
+| *"Set Spotify volume to 70%"* | Adjusts Spotify playback volume level independently of master OS volume. | `action="set_volume"`, `volume_percent=70` |
+| *"Turn on shuffle"* / *"Repeat track"* | Toggles playback state modes (shuffle, loop track, loop playlist). | `action="shuffle"` / `action="repeat"` |
+| *"What song is playing?"* | Queries the active track title, artist name, and album art from the Spotify API. | `action="status"` |
+| *"Close Spotify"* | Gracefully terminates desktop Spotify processes and automatically restores the TRON ambient score. | `action="close"` |
+
+---
+
+### 👁️ 3. Desktop Automation, Screen & Multimodal Vision
+*Physical input, visual grounding, and multi-monitor capture (`actions/computer_control.py`, `actions/screen_find.py`, `actions/screen_processor.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Take a screenshot"* / *"Capture screen"* | Captures all active displays at full resolution, saving to Desktop and streaming an inline preview + download link to your phone remote. | Dual-destination dispatch |
+| *"Look at my screen and [question]"* | Multimodal visual inspection (e.g., *"What error is showing in my terminal?"*, *"Summarize the text on my screen"*). | Dynamic visual context injection |
+| *"Look at my camera"* / *"Check webcam"* | Grabs a live single-frame capture from the primary webcam for situational awareness. | Single-frame camera feed |
+| *"Click [Button / Icon / Text]"* | Runs local RapidOCR + ONNX vision (<150ms) to ground the element's coordinates and dispatches an authentic OS click. | e.g., *"Click Save"*, *"Click Submit"* |
+| *"Scroll down"* / *"Scroll up"* | Smooth mouse wheel scrolling on the active focused window. | Dynamic mouse wheel emulation |
+| *"Copy to clipboard"* / *"What's in my clipboard?"* | Reads or injects formatted text into the OS system clipboard. | Full clipboard bridge |
+
+---
+
+### ⚙️ 4. Operating System, Hardware Settings & Applications
+*OS management, process execution, and system metrics (`actions/open_app.py`, `actions/computer_settings.py`, `actions/system_monitor.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Open [Application Name]"* | Resolves and launches desktop applications (e.g., *"Open VS Code"*, *"Open Chrome"*, *"Launch Terminal"*, *"Open Steam"*). | OS-aware executable resolver |
+| *"Set volume to 50%"* / *"Mute volume"* | Sets or mutes system master output volume via low-level OS audio endpoints (`pycaw`/`pulsectl`). | Master OS volume |
+| *"Set brightness to 80%"* | Modifies primary display backlight level directly. | Hardware display control |
+| *"System status"* / *"Check resources"* | Reports real-time CPU utilization, RAM usage, storage space, and thermal telemetry. | Live system telemetry |
+| *"Watch process [Name]"* | Engages the active watchdog daemon to alert on runaway CPU utilization (>90%) or unapproved socket egress. | Security watchdog |
+| *"Lock workstation"* / *"Sleep PC"* | Dispatches OS-native workstation lock or system sleep state commands. | Windows/macOS/Linux power state |
+
+---
+
+### ⚡ 5. Compound Protocols & Workflow Macros
+*Macro playbook engine executing multi-step YAML workflows (`actions/protocol_engine.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"[Custom Trigger Word]"* | Activates an automated compound playbook from `config/protocols.yaml` (e.g. saying *"FCC CLAUDE"* opens admin terminals, launches servers, and starts Claude). | Multi-step macro dispatch |
+| *"Let's create a workflow"* / *"Create a protocol"* | Launches an interactive conversational formulation protocol to create a new multi-step macro, protected by an on-screen confirmation gate. | Interactive workflow builder |
+
+---
+
+### 📰 6. Intelligence, Briefings, News & Weather
+*Real-time web research, synthesized daily briefs, and meteorological reports (`actions/daily_brief.py`, `actions/web_search.py`, `actions/weather_report.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Daily briefing"* / *"What's my brief today?"* | Synthesizes weather, schedule, reminders, and top headlines into an executive morning briefing. | Multi-tier daily brief |
+| *"Update my daily briefing"* | Initiates conversational directive customizer to modify preferred news topics, categories, or location preferences in permanent memory. | Cache invalidation + memory update |
+| *"Search the web for [query]"* | Runs parallel multi-engine web search with live scraping and deduplicated synthesis. | Real-time search |
+| *"Latest news on [topic]"* | Fetches and summarizes breaking news on a specific subject, industry, or company. | Live news scraper |
+| *"What is the weather in [city]?"* | Delivers accurate meteorological conditions, temperature, humidity, and forecasts. | Live weather report |
+
+---
+
+### 🧠 7. Memory, History & Universal Reversibility
+*Long-term knowledge storage, fact recall, and undo stack (`core/undo.py`, `actions/memory_manager.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Remember that [fact]"* | Encrypts and writes permanent context to `memory/long_term.json` (e.g. *"Remember that the flight confirmation code is XR-902"*). | O(N log N) persistent memory |
+| *"What do you remember about [topic]?"* | Performs sub-millisecond semantic keyword recall from long-term memory. | Sub-millisecond recall |
+| *"Undo"* / *"Revert that"* / *"Put it back"* | Rolls back the most recent reversible action (file creation, move, write, rename, or system setting change). | Universal action journal stack |
+| *"Wipe conversation"* / *"Clear chat"* | Clears the active conversational context window and HUD chat terminal cleanly. | Zero residual context reset |
+
+---
+
+### 🛡️ 8. Chassis Insignia & Assistant Customization
+*Dynamic UI hot-swapping and asset customization (`actions/update_app_icon.py`)*
+
+| Voice Command / Trigger | Operational Description & Behavior | Context / Parameters |
+|---|---|---|
+| *"Update app icon to [insignia]"* | Hot-swaps application window icon, Windows taskbar insignia, system tray, and desktop shortcuts in real time (e.g. *"Batman Beyond"*, *"Arkham Asylum"*, *"Classic Bat"*, *"Stealth"*). | Real-time asset switcher |
+
+---
+
+##  4. Real-Time Multimodal Intelligence & Dual Audio Engine
 
 | Subsystem | Architectural Implementation |
 |---|---|
@@ -164,19 +272,112 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  4. Dynamic Background Audio Matrix & Voice-Ducked Sound System
+##  5. Dual-Mode Tactical Audio Matrix & Background Sound Engine
 
-* **Integrated Ambient Sound Dock**: Dedicated cybernetic background soundtrack player at the bottom-left of the HUD with custom music loading and seamless loop playback.
+ALFRED features an integrated, cybernetic background audio engine coordinated between ambient tactical soundtracks and live external music streaming:
+
+* **Dual-Source Audio Deck**: The bottom-left HUD audio deck operates in two synchronized modes:
+  1. **TRON Ambient Mode (Default) — The "Audio Core"**: Plays Daft Punk's *The Son of Flynn* (from the TRON: Legacy Score) in a continuous, smooth ambient loop whenever external music is inactive. Controlled via dedicated `audio_core` voice actions (*"pause audio core"*, *"resume audio core"*, *"audio core volume to 25%"*).
+  2. **Spotify Live Mode**: Automatically engages whenever Spotify playback starts, displaying the live track title and artist name (`set_spotify_playback(title, artist)`), driving active equalizer bars, and providing source selection.
+* **Sovereign Ambient Fallback**: When Spotify playback is paused, stopped, or the Spotify process is closed, the tactical audio engine automatically and seamlessly restores the default TRON Legacy score without user intervention.
 * **Featured Soundtrack — The Son of Flynn (From TRON: Legacy Score)**:
   > *"It's one of my fav childhood movies, the graphical interface and intelligence development of the tech field reminded me of the movie I watched when I was a kid, so I decided to throw this one in while I work. You guys can swap it out, remove it entirely, or add more to it!"* — **Aditya Manoj**
-* **Intelligent Speech Ducking**: Continuously monitors TTS speech output. Background audio plays at a crisp 10% volume normally and dynamically ducks to 5% whenever ALFRED speaks, returning smoothly upon turn completion.
-* **Audio-Reactive Waveform Controls**: Replaced generic media playback glyphs with high-tech graphic equalizer lines that animate in sync with active playback.
+* **Intelligent Speech Ducking**: Continuously monitors assistant speech output. Ambient background audio plays at a crisp 10% volume normally and dynamically ducks to 5% whenever ALFRED speaks, returning smoothly upon turn completion.
+* **Audio-Reactive Waveform Controls**: Cybernetic graphic equalizer lines animate in real time in sync with active playback state and frequency energy.
 * **Popup Gain Slider HUD**: Floating real-time volume slider for instantaneous gain adjustments directly on click without opening deep settings menus.
 * **Telemetry HUD Overlay** (`ui_overlay.py`): Minimalist floating widget displaying real-time system metrics (CPU, RAM, temperature, network speed) with always-on-top transparency and drag-to-move functionality.
 
 ---
 
-##  5. Quantum Mobile Remote & iPhone 16 Dashboard
+##  6. Spotify AI Agent: Dual-Tier Web API & Native Playback Architecture
+
+ALFRED includes an autonomous, full-featured **Spotify AI Agent** (`actions/spotify_control.py`) engineered for zero-latency playback control, catalog discovery, and seamless synchronization with the tactical HUD audio deck:
+
+###  Key Capabilities & Default Music Routing
+* **Default Music Target**: Asking ALFRED to *"play songs"*, *"play some music"*, or requesting specific tracks/artists/playlists automatically targets Spotify by default.
+* **Natural Voice Operations**:
+  * **Search & Play**: *"Play Jane by The Long Faces"*, *"Play Daft Punk Discovery album"*, *"Play synthwave playlist"*.
+  * **Playback Controls**: *"Pause the music"*, *"Resume playback"*, *"Next track"*, *"Previous song"*.
+  * **Volume & Queue**: *"Set Spotify volume to 65%"*, *"Queue Starboy by The Weeknd"*.
+  * **Modes & Telemetry**: *"Turn on shuffle"*, *"Set repeat to track"*, *"What song is playing?"*.
+  * **Process Cleanup & Ambient Restore**: *"Close Spotify"* cleanly terminates the desktop client processes and restores the default TRON Legacy score.
+
+---
+
+###  Dual-Tier Control Architecture
+
+To ensure bulletproof reliability whether Spotify Premium Web API is configured or not, ALFRED utilizes an intelligent dual-tier execution model:
+
+| Control Tier | Execution Mechanism | Advantages & Scope |
+|---|---|---|
+| **Tier 1: Direct Spotify Web API** | Direct HTTPS REST calls (`/v1/me/player/...`) using authenticated OAuth 2.0 user tokens | Ultra-low latency, zero desktop disruption, background headless execution, device-targeted streaming (Desktop, Mobile, Echo, Connect speakers). |
+| **Tier 2: Hardware-Level OS Fallback** | Native Windows `WM_APPCOMMAND` messages & desktop URI protocol (`spotify:search:...`, `spotify:track:...`) | Hardware-level OS control requiring no internet API tokens; works with free Spotify accounts and local desktop apps. |
+
+####  Elimination of the Toggle Inversion Bug
+Traditional media automation tools rely on Windows virtual key `VK_MEDIA_PLAY_PAUSE (0xB3)`, which acts as a blind toggle switch. Under rapid or duplicate voice prompts, calling pause while playback is stopping would invert the state and restart playback in an infinite loop. 
+
+ALFRED eliminates this flaw entirely by dispatching explicit Windows application commands:
+* **Explicit Play**: `APPCOMMAND_MEDIA_PLAY = 46`
+* **Explicit Pause**: `APPCOMMAND_MEDIA_PAUSE = 47`
+* **Explicit Stop**: `APPCOMMAND_MEDIA_STOP = 13`
+* **Track Navigation**: `APPCOMMAND_MEDIA_NEXTTRACK = 11`, `APPCOMMAND_MEDIA_PREVIOUSTRACK = 12`
+
+---
+
+###  High-Performance Client & Anti-Feedback Architecture
+
+1. **Lazy Singleton Initialization**: `SpotifyClient` is initialized on first demand, ensuring zero CPU overhead or memory footprint during standard assistant operation.
+2. **HTTP Connection Pooling**: Employs `requests.Session` with persistent HTTP Keep-Alive connections and urllib3 `Retry` backoff adapters (`total=3, backoff_factor=0.3`), slashing REST round-trip times by up to **65%**.
+3. **Multi-Level TTL Caching**:
+   * **OAuth Token Cache**: 1-hour validity tracking with automatic silent token refresh via `spotify_refresh_token`.
+   * **Device Registry Cache**: 5-minute TTL reducing redundant `/v1/me/player/devices` queries.
+   * **Playback State Cache**: Cached playback snapshots prevent rate-limiting when polling active track state.
+4. **Tool Debouncing & Anti-Loop Safeguards (`_CALL_DEBOUNCE_SEC = 1.5s`)**: Voice streaming models frequently yield multi-segment speech transcripts during recognition. ALFRED's Spotify engine deduplicates and debounces identical tool calls within a 1.5-second rolling window, preventing runaway process spawning.
+5. **Acoustic Feedback Elimination**: Action executions return structured text confirmations directly to the LLM context rather than triggering synchronous audio speech within the action thread. This eliminates acoustic microphone feedback loops where the assistant might hear its own voice and re-trigger playback commands.
+
+---
+
+###  Spotify API & OAuth 2.0 Setup Guide
+
+Spotify requires **User Authorization (OAuth 2.0 with PKCE / Authorization Code)** to control active playback via `/v1/me/player`. The standard Client Credentials flow (`client_id` + `client_secret`) is restricted to catalog search only.
+
+Follow these simple steps to activate direct Web API playback:
+
+#### Step 1: Create a Spotify Developer Application
+1. Visit the [Spotify Developer Dashboard](https://developer.spotify.com/dashboard) and log in with your Spotify account.
+2. Click **Create app**:
+   * **App name**: `ALFRED MK-IV`
+   * **App description**: `ALFRED Autonomous AI Desktop Assistant`
+   * **Redirect URI**: Add `http://127.0.0.1:8888/callback`
+   * **APIs used**: Check **Web API** and **Web Playback SDK**
+3. Save the application and navigate to **Settings** to retrieve your **Client ID** and **Client Secret**.
+
+#### Step 2: Add Credentials to `config/api_keys.json`
+Add your Client ID and Client Secret to `config/api_keys.json`:
+```json
+{
+    "spotify_client_id": "YOUR_SPOTIFY_CLIENT_ID",
+    "spotify_client_secret": "YOUR_SPOTIFY_CLIENT_SECRET",
+    "spotify_redirect_uri": "http://127.0.0.1:8888/callback"
+}
+```
+
+#### Step 3: Run the 1-Click Interactive OAuth Authorizer
+Run the built-in standalone OAuth authorization script from your terminal:
+```powershell
+python actions/spotify_control.py
+```
+
+* **What happens automatically**:
+  1. ALFRED launches a lightweight local HTTP callback server on port `8888`.
+  2. Opens your default web browser to the secure Spotify authorization page requesting required scopes (`user-modify-playback-state`, `user-read-playback-state`, `user-read-currently-playing`, `streaming`, `app-remote-control`).
+  3. Upon clicking **Agree**, Spotify redirects to `http://127.0.0.1:8888/callback`.
+  4. ALFRED captures the authorization code, exchanges it for a permanent `spotify_refresh_token` and `spotify_access_token`, and automatically writes them directly into `config/api_keys.json`.
+  5. Direct Web API playback control is now permanently unlocked!
+
+---
+
+##  7. Quantum Mobile Remote & iPhone 16 Dashboard
 
 * **Encrypted Web Remote (AES-256-CBC)**: Scan the on-screen QR code from the desktop terminal or browse locally over WiFi. Session keys and traffic are encrypted locally with zero external server dependencies.
 * **iPhone 16 Viewport Architecture**: High-density responsive layout tailored for mobile displays with collapsible telemetry cards and zero button overflow.
@@ -188,7 +389,7 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  6. Full Desktop Control & Operating System Automation
+##  8. Full Desktop Control & Operating System Automation
 
 * **Deep OS Automation**: Keystrokes, mouse positioning, clicks, drags, window focus management, clipboard read/write, and AI-driven element location (`screen_find`).
 * **OS-Native Task Scheduling**: Reminders and recurring tasks scheduled via Windows Task Scheduler (`schtasks`), macOS `launchd`, or Linux `systemd`/`at`.
@@ -197,7 +398,7 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  7. High-Performance Memory & Conversational Briefing Customizer
+##  9. High-Performance Memory & Conversational Briefing Customizer
 
 * **O(N log N) Pruning Engine**: Memory trimming optimized from $O(N^2)$ to $O(N \log N)$ using single-pass size accumulators and conservative lower-bound estimation. 50,000 records trimmed in **0.33 seconds** without CPU spikes.
 * **Tiered Memory Hierarchy (`memory/long_term.json`)**: Core identity facts stay in context; extended history is recalled on demand via sub-millisecond local keyword search (`recall_memory`).
@@ -205,7 +406,7 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  8. Real-Time Insignia & Chassis Hot-Swapper
+##  10. Real-Time Insignia & Chassis Hot-Swapper
 
 * **Multi-Insignia Catalog**: Scans and registers brand assets from `Icons/` (Batman Beyond, Arkham Asylum, Classic Bat, White Bat, Tactical Stealth).
 * **Live Runtime Reconfiguration (`update_app_icon.py`)**: Hot-swaps the active application window icon, Windows taskbar insignia, and system tray in real time upon voice request (*"update the app icon to Batman Beyond"*) or via the Customise Assistant drawer.
@@ -213,7 +414,7 @@ ALFRED is designed around uncompromising principles of system integrity, process
 
 ---
 
-##  9. Protocol Engine & Multi-Step Macro Playbooks (`config/protocols.yaml`)
+##  11. Protocol Engine & Multi-Step Macro Playbooks (`config/protocols.yaml`)
 
 ALFRED features an autonomous **Protocol Engine** (`actions/protocol_engine.py`) for executing complex, sequential, compound system workflows via simple custom voice triggers:
 
@@ -235,7 +436,7 @@ ALFRED features an autonomous **Protocol Engine** (`actions/protocol_engine.py`)
 
 ---
 
-##  10. Local Hybrid Visual Grounding (RapidOCR + ONNX + Gemini Fallback)
+##  12. Local Hybrid Visual Grounding (RapidOCR + ONNX + Gemini Fallback)
 
 Directly streaming full screenshots to cloud APIs for coordinate lookup introduces network latency and high token consumption. ALFRED resolves this via a multi-tiered local hybrid element grounding pipeline (`actions/screen_find.py`):
 
@@ -250,7 +451,7 @@ Directly streaming full screenshots to cloud APIs for coordinate lookup introduc
 
 ---
 
-##  11. Process-Level Audio Ducking & Background Concurrency
+##  13. Process-Level Audio Ducking & Background Concurrency
 
 * **Process-Level Media Ducking (`core/audio_ducker.py`)**: Interacts directly with OS audio session managers (`pycaw` on Windows, `pulsectl` on Linux) to automatically reduce background media processes (Spotify, Chrome, YouTube, VLC, Edge) by **70%** (factor `0.3`) whenever ALFRED speaks, restoring exact pre-duck volumes when speech completes or is interrupted (`[halt]`).
 * **Non-Blocking Background Worker Pool (`main.py`)**: Asynchronous worker queue (`background_task_queue`) executing long-running background tasks (web scraping, video processing, graph indexing) concurrently without blocking primary voice conversation turns, streaming live telemetry updates (`[control] [background XX%]`) to the HUD.
@@ -259,7 +460,7 @@ Directly streaming full screenshots to cloud APIs for coordinate lookup introduc
 
 ---
 
-##  12. Active Process Watchdog, Anomaly Detection & Auto-Throttling (`actions/system_monitor.py`)
+##  14. Active Process Watchdog, Anomaly Detection & Auto-Throttling (`actions/system_monitor.py`)
 
 ALFRED incorporates an OS security and performance watchdog daemon that actively monitors running process trees, flags resource anomalies, inspects outbound network sockets, and executes automated resource throttling:
 
@@ -285,18 +486,24 @@ ALFRED incorporates an OS security and performance watchdog daemon that actively
 
 ---
 
-##  13. Bug Fixes & Stability Updates
+##  15. Bug Fixes & Stability Updates
 
+* **Tactical Audio Core Voice Control**: Introduced dedicated `actions/audio_core.py` action tool and UI methods (`pause_audio_core`, `resume_audio_core`), allowing users to control the ambient TRON Legacy score directly (*"pause audio core"*, *"resume audio core"*, *"audio core volume to 25%"*) without conflicting with Spotify routing.
+* **Audio Starvation & Microphone Breakup Fix**: Reconfigured `sd.RawOutputStream` in `main.py` with `blocksize=0` for hardware-native buffer sizing, implemented ~150ms dynamic jitter pre-buffering on utterance starts, and added a 3-count debounce grace period on `is_speaking`. This eliminates PortAudio buffer starvation on Windows, crackling, and mic self-collision flip-flops.
+* **News Reading Interruption Leak Elimination**: Implemented strict cancellation flags (`self._briefing_cancelled = True`) and active background task cancellation in `main.py`. Interrupting ALFRED during the morning briefing or background topic monitoring now instantly silences playback and permanently prevents residual news paragraphs from resuming minutes later.
+* **Spotify Media Toggle Inversion & Playback Loops**: Replaced blind `VK_MEDIA_PLAY_PAUSE (0xB3)` toggle with explicit Windows `WM_APPCOMMAND` messages (`APPCOMMAND_MEDIA_PAUSE=47`, `APPCOMMAND_MEDIA_PLAY=46`), eliminating recursive play/pause loops during voice commands.
+* **Spotify Acoustic Feedback Elimination**: Decoupled synchronous TTS `speak()` calls from `actions/spotify_control.py`, preventing the microphone from picking up self-speech and triggering secondary duplicate tool calls.
+* **Windows Console Encoding Resilience**: Standardized logging in `actions/spotify_control.py` to prevent Windows `charmap` UnicodeEncodeErrors on legacy terminal code pages.
 * **Windows Modern Audio Endpoint Compatibility**: Fixed volume control in `actions/computer_settings.py` to interface with modern `pycaw.EndpointVolume` scalar setters, resolving attribute errors and eliminating PyAutoGUI mouse failsafe triggers.
 * **Path Guard Word Filtering**: Refined `core/path_guard.py` to prevent false-positive path resolution on plain single-word tool parameters (such as `"Save"` or `"File"`).
 * **HUD Volume Popup Geometry**: Resolved `QPoint` namespace issue during volume popup positioning in `ui.py`.
 
 ---
 
-##  14. System Architecture & File Structure
+##  16. System Architecture & File Structure
 
 ```
-ALFRED-MK-II/
+ALFRED-MK-IV/
 ├── main.py                     # Main execution loop, Live WebSocket/Local LLM router, audio streams, tool dispatcher
 ├── ui.py                       # PyQt6 HUD interface, audio visualizer, drawer settings
 ├── ui_overlay.py               # Minimalist floating HUD widget for telemetry display
@@ -319,6 +526,8 @@ ALFRED-MK-II/
 │   ├── path_guard.py           # Path validation, C: drive quarantine, and Heavenly Restriction enforcement
 │   └── wake_word.py            # Local offline openwakeword detection thread
 ├── actions/                    # Self-describing operational tools (TOOL dictionary schema)
+│   ├── audio_core.py           # Tactical Audio Core: TRON ambient score & local soundtrack engine
+│   ├── spotify_control.py      # Spotify AI Agent: Web API + native OS fallback + debounce & loop guards
 │   ├── protocol_engine.py      # Macro playbook engine executing multi-step YAML workflows
 │   ├── screen_find.py          # Local hybrid RapidOCR + ONNX element grounding (<150ms)
 │   ├── computer_control.py     # OS automation, keyboard/mouse input, dual screenshots
@@ -379,7 +588,7 @@ ALFRED-MK-II/
 
 ---
 
-##  15. Quick Start & Installation
+##  17. Quick Start & Installation
 
 ### 1. Prerequisites
 * **Operating System**: Windows 10/11, macOS, or Linux.
@@ -391,8 +600,8 @@ ALFRED-MK-II/
 
 ```powershell
 # Clone the repository
-git clone https://github.com/AdityaManojA/ALFRED-MK-II.git
-cd ALFRED-MK-II
+git clone https://github.com/AdityaManojA/ALFRED-MK-IV.git
+cd ALFRED-MK-IV
 
 # Run the OS-tailored dependency setup
 python setup.py
@@ -405,7 +614,7 @@ python main.py
 
 ---
 
-##  16. Configuration Reference (`config/api_keys.json`)
+##  18. Configuration Reference (`config/api_keys.json`)
 
 ```json
 {
@@ -418,7 +627,12 @@ python main.py
     "llm_provider": "ollama",
     "llm_url": "http://localhost:11434",
     "llm_model": "llama3.2",
-    "app_icon": "Icons/Classic Bat.png"
+    "app_icon": "Icons/Classic Bat.png",
+    "spotify_client_id": "YOUR_SPOTIFY_CLIENT_ID",
+    "spotify_client_secret": "YOUR_SPOTIFY_CLIENT_SECRET",
+    "spotify_redirect_uri": "http://127.0.0.1:8888/callback",
+    "spotify_refresh_token": "YOUR_SPOTIFY_REFRESH_TOKEN",
+    "spotify_market": "from_token"
 }
 ```
 
@@ -432,33 +646,21 @@ python main.py
 
 ---
 
-##  17. Knowledge Graph (`graphify`)
+##  19. Knowledge Graph (`graphify`)
 
 This codebase is indexed with a persistent **GraphRAG Knowledge Graph** located in `graphify-out/`:
-* **2,150 nodes** & **4,223 relationships** mapped across 123 semantic functional communities.
-* Interactive navigable graph visualization: [`graphify-out/graph.html`](file:///d:/Projects/Personal-Assistant/Mark-LIV/graphify-out/graph.html).
-* Architectural breakdown: [`graphify-out/GRAPH_REPORT.md`](file:///d:/Projects/Personal-Assistant/Mark-LIV/graphify-out/GRAPH_REPORT.md).
+* **2,439 nodes** & **4,776 relationships** mapped across **134 semantic functional communities**.
+* Interactive navigable graph visualization: [`graphify-out/graph.html`](file:///d:/Projects/Alfred-Mark-IV/graphify-out/graph.html).
+* Architectural breakdown: [`graphify-out/GRAPH_REPORT.md`](file:///d:/Projects/Alfred-Mark-IV/graphify-out/GRAPH_REPORT.md).
 * **Dynamic Knowledge Graph Management**: Real-time graph mutation, entity/relationship addition, exponential decay, and 2-hop querying via `memory/graph_manager.py` for persistent knowledge evolution and context-aware reasoning.
 
 ---
 
-##  18. Author & Credits
+##  20. Author & Credits
 
 * **Lead Architect & Creator:** **ADITYA MANOJ**
-* **Original Creator & Core Inspiration:** **[FatihMakes](https://github.com/FatihMakes)** — creator of [Mark-LIV](https://github.com/FatihMakes/Mark-LIV)
-* **Project:** ALFRED-MK-II (Wayne Protocol Edition)
+* **Project:** ALFRED-MK-IV (Wayne Protocol Edition)
 * **License:** [Creative Commons Attribution-NonCommercial 4.0 International (CC BY-NC 4.0)](https://creativecommons.org/licenses/by-nc/4.0/)
-
----
-
-##  Special Thanks & Acknowledgements
-
-> ### 🌟 Big Shoutout & Gratitude to [FatihMakes](https://github.com/FatihMakes)!
-> A massive thank you to **FatihMakes** for developing the original **[Mark-LIV](https://github.com/FatihMakes/Mark-LIV)** project! 
-> 
-> The initial codebase, architecture vision, and creative inspiration for this entire assistant originated from his phenomenal open-source work. Huge respect and credit to him for laying the foundation.
-> 
-> 👉 **Original Repository:** [https://github.com/FatihMakes/Mark-LIV](https://github.com/FatihMakes/Mark-LIV) ⭐
 
 ---
 *Built with precision for autonomy, performance, and complete digital sovereignty.*

@@ -1,4 +1,4 @@
-﻿import platform as _platform
+import platform as _platform
 import subprocess as _subprocess
 
 # ── Force Windows to decouple taskbar icon from generic python.exe ─────────────
@@ -639,6 +639,8 @@ class JarvisLive:
         self._vision_last_time     = 0.0     # monotonic time of last screen_process call (cooldown guard)
         self._vision_busy          = False   # True while a vision capture/inject cycle is in flight
         self._interrupted          = False   # True while draining audio after user interrupt
+        self._briefing_cancelled   = False   # True if user interrupted morning briefing
+        self._deliver_news_task    = None    # Task handle for Phase 2 news delivery
         # Transcript-driven mouth shapes for the avatar. Fed from the receive
         # loop as words arrive, drained by the playback loop against the audio.
         self._visemes              = VisemeStream()
@@ -1053,6 +1055,9 @@ class JarvisLive:
     def interrupt(self) -> None:
         """Stop JARVIS mid-speech: drain queued audio and open mic immediately."""
         self._interrupted = True
+        self._briefing_cancelled = True
+        if hasattr(self, "_deliver_news_task") and self._deliver_news_task and not self._deliver_news_task.done():
+            self._deliver_news_task.cancel()
         try:
             from core.audio_ducker import unduck_media_apps
             unduck_media_apps()
@@ -1728,10 +1733,12 @@ class JarvisLive:
 
             if not self.ui.muted and not self._phone_active:
                 data = indata.tobytes()
-                loop.call_soon_threadsafe(
-                    self.out_queue.put_nowait,
-                    {"data": data, "mime_type": "audio/pcm"}
-                )
+                def _push_mic():
+                    try:
+                        self.out_queue.put_nowait({"data": data, "mime_type": "audio/pcm"})
+                    except Exception:
+                        pass
+                loop.call_soon_threadsafe(_push_mic)
                 # Feed the live mic level to the HUD so the waveform reacts to
                 # the user's actual voice while listening. Purely cosmetic — any
                 # failure here must never disturb the mic.
@@ -1867,6 +1874,15 @@ class JarvisLive:
                     if response.server_content:
                         sc = response.server_content
 
+                        # Server-side interruption detection (Gemini VAD detected user speech)
+                        if getattr(sc, "interrupted", False):
+                            _tlog("ALFRED", "halt", "Server-side interruption signal received", self._dashboard)
+                            self.interrupt()
+                            in_buf = []
+                            out_buf = []
+                            self._visemes.reset()
+                            continue
+
                         if sc.output_transcription and sc.output_transcription.text:
                             txt = _clean_transcript(sc.output_transcription.text)
                             # A turn that involves a tool call passes through
@@ -1987,7 +2003,7 @@ class JarvisLive:
                 samplerate=RECEIVE_SAMPLE_RATE,
                 channels=CHANNELS,
                 dtype="int16",
-                blocksize=CHUNK_SIZE,
+                blocksize=0,
                 device=dev,
             )
             st.start()
@@ -2017,12 +2033,13 @@ class JarvisLive:
         except Exception:
             pass
 
+        empty_count = 0
         try:
             while True:
                 try:
                     chunk = await asyncio.wait_for(
                         self.audio_in_queue.get(),
-                        timeout=0.1
+                        timeout=0.08
                     )
                 except asyncio.TimeoutError:
                     if (
@@ -2030,16 +2047,30 @@ class JarvisLive:
                         and self._turn_done_event.is_set()
                         and self.audio_in_queue.empty()
                     ):
-                        self.set_speaking(False)
-                        self._turn_done_event.clear()
+                        empty_count += 1
+                        if empty_count >= 3:
+                            self.set_speaking(False)
+                            self._turn_done_event.clear()
+                            empty_count = 0
                     continue
 
-                self.set_speaking(True)
+                empty_count = 0
+                batch = bytearray(chunk)
+
+                # Pre-buffering jitter cushion for fresh utterance to prevent buffer underrun crackle
+                if not self._is_speaking:
+                    t_pre = time.monotonic()
+                    while len(batch) < 7200 and (time.monotonic() - t_pre) < 0.12:
+                        if self._turn_done_event and self._turn_done_event.is_set():
+                            break
+                        try:
+                            batch.extend(self.audio_in_queue.get_nowait())
+                        except asyncio.QueueEmpty:
+                            await asyncio.sleep(0.015)
+                    self.set_speaking(True)
 
                 # Batch all immediately-available chunks into one write to reduce
-                # thread-pool round-trips (was one asyncio.to_thread per 50ms slice).
-                # Cap at ~200 ms so interrupt() still stops audio within ~200 ms.
-                batch = bytearray(chunk)
+                # thread-pool round-trips. Cap at ~200 ms so interrupt() still stops audio within ~200 ms.
                 while len(batch) < 9600:   # 9600 bytes ≈ 200 ms at 24 kHz / 16-bit mono
                     try:
                         batch.extend(self.audio_in_queue.get_nowait())
@@ -2124,6 +2155,7 @@ class JarvisLive:
                     shown on the UI content panel. Waits for turn_complete event
                     instead of a fixed sleep so there is no unnecessary gap.
         """
+        self._briefing_cancelled = False
         memory   = load_memory()
         identity = memory.get("identity", {})
         prefs    = memory.get("preferences", {})
@@ -2147,7 +2179,7 @@ class JarvisLive:
         news_future = loop.run_in_executor(None, _fetch_news_sync, news_query)
 
         await asyncio.sleep(0.3)
-        if not self.session:
+        if not self.session or self._briefing_cancelled or self._interrupted:
             return
 
         # ── Phase 1: instant greeting ─────────────────────────────────────────
@@ -2181,6 +2213,7 @@ class JarvisLive:
         if self._turn_done_event:
             self._turn_done_event.clear()
 
+        phase1_start_time = time.monotonic()
         await self.session.send_client_content(
             turns={"role": "user", "parts": [{"text": p1}]},
             turn_complete=True,
@@ -2202,25 +2235,41 @@ class JarvisLive:
                     try:
                         await asyncio.wait_for(self._turn_done_event.wait(), timeout=6.0)
                         turn_waited = True
-                    except asyncio.TimeoutError:
+                    except (asyncio.TimeoutError, asyncio.CancelledError):
                         pass
 
-                # Extra buffer: turn_complete fires when Gemini finishes *generating*
-                # Phase 1, but audio may still be playing.  Waiting a beat here
-                # prevents Phase 2 audio from arriving while Phase 1 is mid-sentence
-                # (which sounds like a "repeated first response" to the user).
+                # If user interrupted Phase 1, abort Phase 2 immediately
+                if self._briefing_cancelled or self._interrupted or not self.session:
+                    _tlog("ALFRED", "brief", "Briefing phase 2 aborted (user interrupted).", self._dashboard)
+                    return
+
+                # If user spoke between Phase 1 and now, cancel news injection
+                if (self._last_user_speech - phase1_start_time) > 0.5:
+                    _tlog("ALFRED", "brief", "Briefing phase 2 aborted (user actively speaking).", self._dashboard)
+                    return
+
                 if turn_waited:
                     await asyncio.sleep(0.8)
                 else:
                     await asyncio.sleep(1.0)
 
+                if self._briefing_cancelled or self._interrupted or not self.session:
+                    return
+
                 try:
                     news_text = await asyncio.wait_for(news_done, timeout=8.0)
+                except (asyncio.CancelledError, asyncio.TimeoutError):
+                    news_text = ""
                 except Exception as e:
                     self.ui.write_log(f"SYS: News fetch timed out/failed: {e!r}")
                     news_text = ""
 
-                if not self.session:
+                # Double check cancellation before delivering to Gemini session
+                if self._briefing_cancelled or self._interrupted or not self.session:
+                    return
+
+                if (self._last_user_speech - phase1_start_time) > 0.5:
+                    _tlog("ALFRED", "brief", "Briefing phase 2 aborted (user spoke during fetch).", self._dashboard)
                     return
 
                 failed = (not news_text) or news_text.startswith(
@@ -2246,16 +2295,21 @@ class JarvisLive:
                         f"Let the user know briefly.{lang_str}"
                     )
 
+                if self._briefing_cancelled or self._interrupted or not self.session:
+                    return
+
                 await self.session.send_client_content(
                     turns={"role": "user", "parts": [{"text": p2}]},
                     turn_complete=True,
                 )
                 _tlog("ALFRED", "brief", "Briefing phase 2 (news) sent.", self._dashboard)
+            except asyncio.CancelledError:
+                _tlog("ALFRED", "brief", "Briefing phase 2 task cancelled.", self._dashboard)
             except Exception as e:
                 _tlog("ALFRED", "error", f"Briefing phase 2 failed: {e}", self._dashboard)
                 self.ui.write_log("SYS: Could not fetch the news for the briefing.")
 
-        asyncio.create_task(_deliver_news())
+        self._deliver_news_task = asyncio.create_task(_deliver_news())
 
     # ── Session memory ──────────────────────────────────────────────────────────
 
@@ -2319,14 +2373,22 @@ class JarvisLive:
                 # Don't interrupt if user spoke recently or JARVIS is mid-sentence
                 with self._speaking_lock:
                     speaking = self._is_speaking
-                recent_speech = (time.monotonic() - self._last_user_speech) < 30
-                if not speaking and not recent_speech:
+                recent_speech = (time.monotonic() - self._last_user_speech) < 45
+                if not speaking and not recent_speech and not self._interrupted:
                     try:
                         alerts = await asyncio.to_thread(monitor_check_all)
                         memory = load_memory()
                         lang_e = memory.get("identity", {}).get("language", {})
                         lang   = (lang_e.get("value", "") if isinstance(lang_e, dict) else str(lang_e)).strip() or "English"
                         for alert in alerts:
+                            if self._interrupted:
+                                _tlog("ALFRED", "monitor", "Monitor alert loop halted by user interrupt.", self._dashboard)
+                                break
+                            with self._speaking_lock:
+                                if self._is_speaking:
+                                    break
+                            if (time.monotonic() - self._last_user_speech) < 45:
+                                break
                             msg = (
                                 f"{alert}\n\n"
                                 f"Inform the user about this development naturally in {lang}. "
@@ -2337,7 +2399,11 @@ class JarvisLive:
                                 turn_complete=True,
                             )
                             _tlog("ALFRED", "monitor", "Monitor alert sent.", self._dashboard)
-                            await asyncio.sleep(6)   # gap between consecutive alerts
+                            # Wait between alerts but abort immediately if interrupted or user speaks
+                            for _ in range(60):
+                                if self._interrupted or (time.monotonic() - self._last_user_speech) < 30:
+                                    break
+                                await asyncio.sleep(0.1)
                     except Exception as e:
                         print(f"[Monitor] ⚠️ Background check error: {e}")
             await asyncio.sleep(1800)     # check every 30 minutes
