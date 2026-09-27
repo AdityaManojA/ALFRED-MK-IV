@@ -52,11 +52,30 @@ def get_gemini_key() -> str | None:
 def get_llm_provider() -> str:
     return load_api_keys().get("llm_provider", "gemini").lower()
 
+def get_openrouter_key() -> str | None:
+    cfg = load_api_keys()
+    return cfg.get("openrouter_api_key") or cfg.get("OPENROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY")
+
+def get_openrouter_model() -> str:
+    cfg = load_api_keys()
+    return cfg.get("openrouter_model") or cfg.get("llm_model") or "anthropic/claude-3.5-sonnet"
+
+def save_openrouter_config(api_key: str, model: str = "anthropic/claude-3.5-sonnet") -> None:
+    _patch_config(
+        llm_provider="openrouter",
+        openrouter_api_key=api_key.strip(),
+        openrouter_model=model.strip(),
+        llm_model=model.strip(),
+    )
+
 def is_configured() -> bool:
     cfg = load_api_keys()
     provider = cfg.get("llm_provider", "gemini").lower()
     if provider in ("ollama", "openai", "lmstudio", "local"):
         return True
+    if provider == "openrouter":
+        key = get_openrouter_key()
+        return bool(key and len(key.strip()) > 5)
     key = get_gemini_key()
     return bool(key and len(key.strip()) > 5)
 

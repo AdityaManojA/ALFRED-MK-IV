@@ -3731,7 +3731,7 @@ class SetupOverlay(QWidget):
 
         cur_cfg = _read_full_config()
         self._provider = cur_cfg.get("llm_provider", "gemini").lower()
-        if self._provider not in ("gemini", "ollama", "openai"):
+        if self._provider not in ("gemini", "ollama", "openai", "openrouter"):
             self._provider = "gemini"
 
         layout = QVBoxLayout(self)
@@ -3748,11 +3748,20 @@ class SetupOverlay(QWidget):
             w.setStyleSheet(f"color: {color}; background: transparent;")
             return w
 
+        # Common input field styling
+        _inp_style = f"""
+            QLineEdit {{
+                background: {C.PANEL2}; color: {C.TEXT_BRIGHT};
+                border: 1px solid {C.BORDER_A}; border-radius: 2px; padding: 4px 8px;
+            }}
+            QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
+        """
+
         # Header with Title and Close Button
         hdr_row = QHBoxLayout()
         hdr_box = QVBoxLayout(); hdr_box.setSpacing(2)
-        hdr_box.addWidget(_lbl("◈  SYSTEM INITIALISATION // NEURAL BACKEND", 11, True, align=Qt.AlignmentFlag.AlignLeft))
-        hdr_box.addWidget(_lbl("Configure neural interface backend and credentials.", 8, color=C.PRI_DIM, align=Qt.AlignmentFlag.AlignLeft))
+        hdr_box.addWidget(_lbl("◈  SYSTEM INITIALISATION // OPERATOR & NEURAL CONFIG", 11, True, align=Qt.AlignmentFlag.AlignLeft))
+        hdr_box.addWidget(_lbl("Configure operator designation, neural interface backend, and credentials.", 8, color=C.PRI_DIM, align=Qt.AlignmentFlag.AlignLeft))
         hdr_row.addLayout(hdr_box)
         hdr_row.addStretch()
 
@@ -3781,15 +3790,39 @@ class SetupOverlay(QWidget):
         sep.setStyleSheet(f"color: {C.BORDER_A}; margin: 2px 0;"); layout.addWidget(sep)
         layout.addSpacing(2)
 
+        # ── Operator Designation & Identity ─────────────────────────────
+        ident_row = QHBoxLayout(); ident_row.setSpacing(8)
+        user_box = QVBoxLayout(); user_box.setSpacing(2)
+        user_box.addWidget(_lbl("OPERATOR CALLSIGN / USER DESIGNATION", 7, bold=True, color=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft))
+        self._user_input = QLineEdit(cur_cfg.get("user_name", ""))
+        self._user_input.setPlaceholderText("e.g. Master Wayne, Sir, or your name")
+        self._user_input.setFont(mono_font(8))
+        self._user_input.setFixedHeight(26)
+        self._user_input.setStyleSheet(_inp_style)
+        user_box.addWidget(self._user_input)
+        ident_row.addLayout(user_box, stretch=3)
+
+        asst_box = QVBoxLayout(); asst_box.setSpacing(2)
+        asst_box.addWidget(_lbl("ASSISTANT CALLSIGN", 7, bold=True, color=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft))
+        self._asst_input = QLineEdit(cur_cfg.get("assistant_name", "Alfred") or "Alfred")
+        self._asst_input.setFont(mono_font(8))
+        self._asst_input.setFixedHeight(26)
+        self._asst_input.setStyleSheet(_inp_style)
+        asst_box.addWidget(self._asst_input)
+        ident_row.addLayout(asst_box, stretch=2)
+        layout.addLayout(ident_row)
+        layout.addSpacing(2)
+
         # ── Backend Mode Selector ───────────────────────────────────────
-        layout.addWidget(_lbl("INTELLIGENCE BACKEND // DUAL-OPERATION MODE", 8, bold=True, color=C.TEXT_DIM,
+        layout.addWidget(_lbl("INTELLIGENCE BACKEND // MULTI-ROUTE ARCHITECTURE", 8, bold=True, color=C.TEXT_DIM,
                                align=Qt.AlignmentFlag.AlignLeft))
         mode_row = QHBoxLayout(); mode_row.setSpacing(6)
         self._mode_btns: dict[str, QPushButton] = {}
         for m_key, m_label in [
             ("gemini", "◈  GEMINI LIVE"),
             ("ollama", "🦙  LOCAL OLLAMA"),
-            ("openai", "⚡  LM STUDIO / API"),
+            ("openai", "⚡  LM STUDIO"),
+            ("openrouter", "🌐  OPENROUTER API"),
         ]:
             b = QPushButton(m_label)
             b.setFont(tech_font(8, QFont.Weight.Bold, 30))
@@ -3800,15 +3833,6 @@ class SetupOverlay(QWidget):
             mode_row.addWidget(b)
         layout.addLayout(mode_row)
         layout.addSpacing(2)
-
-        # Common input field styling
-        _inp_style = f"""
-            QLineEdit {{
-                background: {C.PANEL2}; color: {C.TEXT_BRIGHT};
-                border: 1px solid {C.BORDER_A}; border-radius: 2px; padding: 4px 8px;
-            }}
-            QLineEdit:focus {{ border: 1px solid {C.PRI}; }}
-        """
 
         # ── Provider Stack ──────────────────────────────────────────────
         self._provider_stack = QStackedWidget()
@@ -3928,6 +3952,82 @@ class SetupOverlay(QWidget):
         lm_lay.addStretch()
         self._provider_stack.addWidget(lm_w)
 
+        # 4. OpenRouter Stack Page
+        or_w = QWidget(); or_lay = QVBoxLayout(or_w)
+        or_lay.setContentsMargins(0, 0, 0, 0); or_lay.setSpacing(4)
+
+        or_key_box = QVBoxLayout(); or_key_box.setSpacing(2)
+        or_key_box.addWidget(_lbl("OPENROUTER DIRECTIVE API KEY", 7, bold=True, color=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft))
+        existing_or_key = (cur_cfg.get("openrouter_api_key") or cur_cfg.get("OPENROUTER_API_KEY")
+                           or os.environ.get("OPENROUTER_API_KEY", ""))
+        self._or_key_input = QLineEdit(existing_or_key)
+        self._or_key_input.setEchoMode(QLineEdit.EchoMode.Password)
+        self._or_key_input.setPlaceholderText("sk-or-v1-... (from openrouter.ai/keys)")
+        self._or_key_input.setFont(mono_font(9))
+        self._or_key_input.setFixedHeight(28)
+        self._or_key_input.setStyleSheet(_inp_style)
+        or_key_box.addWidget(self._or_key_input)
+        or_lay.addLayout(or_key_box)
+
+        or_model_box = QVBoxLayout(); or_model_box.setSpacing(2)
+        or_model_box.addWidget(_lbl("TARGET NEURAL MODEL IDENTIFIER", 7, bold=True, color=C.TEXT_DIM, align=Qt.AlignmentFlag.AlignLeft))
+        default_or_model = cur_cfg.get("openrouter_model") or cur_cfg.get("llm_model") or "anthropic/claude-3.5-sonnet"
+        self._or_model = QLineEdit(default_or_model)
+        self._or_model.setFont(mono_font(9))
+        self._or_model.setFixedHeight(28)
+        self._or_model.setStyleSheet(_inp_style)
+        or_model_box.addWidget(self._or_model)
+        or_lay.addLayout(or_model_box)
+
+        # Quick-pick model chips
+        or_chip_row = QHBoxLayout(); or_chip_row.setSpacing(4)
+        for chip_label, model_id in [
+            ("claude-3.5-sonnet", "anthropic/claude-3.5-sonnet"),
+            ("gemini-2.0-flash", "google/gemini-2.0-flash-001"),
+            ("llama-3.3-70b", "meta-llama/llama-3.3-70b-instruct"),
+            ("deepseek-r1", "deepseek/deepseek-r1"),
+            ("gpt-4o", "openai/gpt-4o"),
+            ("auto", "openrouter/auto"),
+        ]:
+            cb = QPushButton(chip_label)
+            cb.setFixedHeight(20)
+            cb.setFont(mono_font(7, letter_spacing=0.2))
+            cb.setCursor(Qt.CursorShape.PointingHandCursor)
+            cb.setStyleSheet(f"""
+                QPushButton {{
+                    background: {C.PANEL2}; color: {C.TEXT_MED};
+                    border: 1px solid {C.BORDER_A}; border-radius: 2px; padding: 0 5px;
+                }}
+                QPushButton:hover {{ border-color: {C.PRI}; color: #ffffff; background: rgba(142, 155, 255, 0.10); }}
+            """)
+            cb.clicked.connect(lambda _, m=model_id: self._or_model.setText(m))
+            or_chip_row.addWidget(cb)
+        or_chip_row.addStretch()
+        or_lay.addLayout(or_chip_row)
+
+        or_probe_row = QHBoxLayout(); or_probe_row.setSpacing(8)
+        self._or_probe_btn = QPushButton("◈  PROBE ROUTE")
+        self._or_probe_btn.setFixedHeight(24)
+        self._or_probe_btn.setFont(tech_font(7, QFont.Weight.Bold))
+        self._or_probe_btn.setCursor(Qt.CursorShape.PointingHandCursor)
+        self._or_probe_btn.setStyleSheet(f"""
+            QPushButton {{
+                background: {C.PANEL2}; color: {C.PRI};
+                border: 1px solid {C.PRI}; border-radius: 2px; padding: 0 8px;
+            }}
+            QPushButton:hover {{ background: {C.PRI}; color: {C.DARK}; }}
+        """)
+        self._or_probe_btn.clicked.connect(self._probe_openrouter)
+        or_probe_row.addWidget(self._or_probe_btn)
+
+        self._or_probe_status = QLabel("Unified gateway to 200+ frontier models")
+        self._or_probe_status.setFont(tech_font(7))
+        self._or_probe_status.setStyleSheet(f"color: {C.TEXT_MUTED}; background: transparent;")
+        or_probe_row.addWidget(self._or_probe_status, stretch=1)
+        or_lay.addLayout(or_probe_row)
+        or_lay.addStretch()
+        self._provider_stack.addWidget(or_w)
+
         layout.addWidget(self._provider_stack)
         layout.addSpacing(2)
 
@@ -4019,7 +4119,7 @@ class SetupOverlay(QWidget):
 
     def _set_backend(self, key: str):
         self._provider = key
-        idx_map = {"gemini": 0, "ollama": 1, "openai": 2}
+        idx_map = {"gemini": 0, "ollama": 1, "openai": 2, "openrouter": 3}
         self._provider_stack.setCurrentIndex(idx_map.get(key, 0))
         for k, btn in self._mode_btns.items():
             if k == key:
@@ -4086,10 +4186,51 @@ class SetupOverlay(QWidget):
 
         threading.Thread(target=lambda: _on_done(*_check()), daemon=True).start()
 
+    def _probe_openrouter(self):
+        key = self._or_key_input.text().strip()
+        if not key:
+            self._or_probe_status.setText("▲ ENTER API KEY FIRST")
+            self._or_probe_status.setStyleSheet(f"color: {C.RED}; background: transparent;")
+            return
+        self._or_probe_status.setText("Probing OpenRouter gateway...")
+        self._or_probe_status.setStyleSheet(f"color: {C.ACC2}; background: transparent;")
+
+        def _check():
+            import urllib.request
+            try:
+                req = urllib.request.Request(
+                    "https://openrouter.ai/api/v1/auth/key",
+                    headers={
+                        "Authorization": f"Bearer {key}",
+                        "User-Agent": "ALFRED-Mark-IV",
+                    }
+                )
+                with urllib.request.urlopen(req, timeout=5.0) as resp:
+                    if resp.status == 200:
+                        data = json.loads(resp.read().decode("utf-8")).get("data", {})
+                        usage = data.get("usage")
+                        if usage is not None:
+                            return True, f"● ONLINE // Key Valid (Usage: ${usage:.2f})"
+                        return True, "● ONLINE // Gateway Verified"
+            except Exception as e:
+                err_msg = str(e)
+                if "401" in err_msg or "403" in err_msg:
+                    return False, "▲ INVALID API KEY (401 Unauthorized)"
+                return False, f"▲ CONNECTION FAILED ({type(e).__name__})"
+            return False, "▲ PROBE FAILED"
+
+        def _on_done(ok, msg):
+            self._or_probe_status.setText(msg)
+            self._or_probe_status.setStyleSheet(f"color: {C.GREEN if ok else C.RED}; background: transparent;")
+
+        threading.Thread(target=lambda: _on_done(*_check()), daemon=True).start()
+
     def _submit(self):
         self._err_lbl.hide()
         prov = self._provider
         os_name = self._sel_os
+        u_name = self._user_input.text().strip()
+        a_name = self._asst_input.text().strip() or "Alfred"
 
         if prov == "gemini":
             key = self._key_input.text().strip()
@@ -4098,13 +4239,15 @@ class SetupOverlay(QWidget):
                     self._key_input.styleSheet() +
                     f" QLineEdit {{ border: 1px solid {C.RED}; }}"
                 )
-                self._err_lbl.setText("GEMINI KEY REQUIRED FOR CLOUD. OR SELECT LOCAL OLLAMA.")
+                self._err_lbl.setText("GEMINI KEY REQUIRED FOR CLOUD. OR SELECT OPENROUTER / LOCAL.")
                 self._err_lbl.show()
                 return
             config_dict = {
                 "llm_provider": "gemini",
                 "gemini_api_key": key,
                 "os_system": os_name,
+                "user_name": u_name,
+                "assistant_name": a_name,
             }
         elif prov == "ollama":
             url = self._ollama_url.text().strip() or "http://localhost:11434"
@@ -4116,6 +4259,28 @@ class SetupOverlay(QWidget):
                 "llm_model": model,
                 "gemini_api_key": key,
                 "os_system": os_name,
+                "user_name": u_name,
+                "assistant_name": a_name,
+            }
+        elif prov == "openrouter":
+            or_key = self._or_key_input.text().strip()
+            or_model = self._or_model.text().strip() or "anthropic/claude-3.5-sonnet"
+            if not or_key:
+                self._or_key_input.setStyleSheet(
+                    self._or_key_input.styleSheet() +
+                    f" QLineEdit {{ border: 1px solid {C.RED}; }}"
+                )
+                self._err_lbl.setText("OPENROUTER API KEY REQUIRED FOR ROUTING.")
+                self._err_lbl.show()
+                return
+            config_dict = {
+                "llm_provider": "openrouter",
+                "openrouter_api_key": or_key,
+                "openrouter_model": or_model,
+                "llm_model": or_model,
+                "os_system": os_name,
+                "user_name": u_name,
+                "assistant_name": a_name,
             }
         else:  # openai / lmstudio
             url = self._lm_url.text().strip() or "http://localhost:1234/v1"
@@ -4127,6 +4292,8 @@ class SetupOverlay(QWidget):
                 "llm_model": model,
                 "gemini_api_key": key,
                 "os_system": os_name,
+                "user_name": u_name,
+                "assistant_name": a_name,
             }
 
         self.done.emit(config_dict)
@@ -8921,6 +9088,14 @@ class MainWindow(QMainWindow):
                 # Local offline model configured — Gemini API key is NOT required
                 return True
 
+            if provider == "openrouter":
+                k = (
+                    d.get("openrouter_api_key")
+                    or d.get("OPENROUTER_API_KEY")
+                    or os.environ.get("OPENROUTER_API_KEY", "")
+                )
+                return bool(k and len(k.strip()) > 5)
+
             # If Gemini (or default): check for API key in config or environment
             key = (
                 d.get("gemini_api_key")
@@ -8932,7 +9107,7 @@ class MainWindow(QMainWindow):
                 return True
 
             # Also check if any other provider keys exist
-            for pk in ("openai_api_key", "groq_api_key", "anthropic_api_key"):
+            for pk in ("openai_api_key", "groq_api_key", "anthropic_api_key", "openrouter_api_key"):
                 val = d.get(pk)
                 if val and isinstance(val, str) and len(val.strip()) > 5:
                     return True
@@ -8950,8 +9125,8 @@ class MainWindow(QMainWindow):
             self._overlay = None
         ov = SetupOverlay(self.centralWidget())
         cw = self.centralWidget()
-        ow = min(540, cw.width() - 40)
-        oh = min(480, cw.height() - 40)
+        ow = min(580, cw.width() - 40)
+        oh = min(540, cw.height() - 40)
         ov.setGeometry(
             (cw.width()  - ow) // 2,
             (cw.height() - oh) // 2,
@@ -8987,6 +9162,12 @@ class MainWindow(QMainWindow):
             current.update(config_data)
             os_name = current.get("os_system", "windows")
             prov = current.get("llm_provider", "gemini")
+            if "assistant_name" in config_data and config_data["assistant_name"]:
+                self._assistant_name = str(config_data["assistant_name"]).strip()
+                try:
+                    self.setWindowTitle(f"{self._assistant_name.upper()} - {APP_VERSION}")
+                except Exception:
+                    pass
         else:
             current["gemini_api_key"] = str(config_data)
             if os_name:

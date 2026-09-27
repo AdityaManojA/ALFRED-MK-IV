@@ -688,11 +688,19 @@
         if (d.ok && d.token) {
           sessionStorage.setItem('jarvis_key', d.key);
           sessionStorage.setItem('jarvis_token', d.token);
+          localStorage.setItem('jarvis_key', d.key);
+          localStorage.setItem('jarvis_token', d.token);
+          if (d.device_token) {
+            localStorage.setItem('jarvis_device_token', d.device_token);
+          }
           location.replace('/');
           return;
+        } else if (r.status === 401) {
+          localStorage.removeItem('jarvis_device_token');
         }
-      } catch (_) {}
-      localStorage.removeItem('jarvis_device_token');
+      } catch (_) {
+        // Network glitch or server starting up — keep device token for next attempt
+      }
       document.getElementById('reconnecting').style.display = 'none';
     })();
 
@@ -723,6 +731,11 @@
       if (data.ok && data.token) {
         sessionStorage.setItem('jarvis_key', key);
         sessionStorage.setItem('jarvis_token', data.token);
+        localStorage.setItem('jarvis_key', key);
+        localStorage.setItem('jarvis_token', data.token);
+        if (data.device_token) {
+          localStorage.setItem('jarvis_device_token', data.device_token);
+        }
         location.href = '/';
       } else {
         inp.value = '';

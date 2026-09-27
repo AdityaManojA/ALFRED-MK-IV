@@ -40,15 +40,19 @@ BASE_DIR    = get_base_dir()
 CONFIG_PATH = BASE_DIR / "config" / "api_keys.json"
 
 _DEFAULTS = {
-    "llm_url":      "http://localhost:11434",
-    "llm_model":    "llama3.2",
-    "llm_provider": "ollama",   # "ollama" | "openai"
+    "llm_url":          "http://localhost:11434",
+    "llm_model":        "llama3.2",
+    "llm_provider":     "ollama",   # "ollama" | "openai" | "openrouter"
+    "openrouter_url":   "https://openrouter.ai/api/v1",
+    "openrouter_model": "anthropic/claude-3.5-sonnet",
 }
 
 
 def get_llm_provider() -> str:
-    """Returns 'ollama' or 'openai' (covers LM Studio, LocalAI, Jan, etc.)."""
+    """Returns 'ollama', 'openai', or 'openrouter'."""
     raw = _load_config().get("llm_provider", "ollama").strip().lower()
+    if raw == "openrouter":
+        return "openrouter"
     return "openai" if raw in ("openai", "lmstudio", "localai", "jan", "llamacpp") else "ollama"
 
 
@@ -59,21 +63,51 @@ def _load_config() -> dict:
         return {}
 
 
+def _get_headers(provider: str) -> dict:
+    cfg = _load_config()
+    headers = {"Content-Type": "application/json"}
+    if provider == "openrouter":
+        key = cfg.get("openrouter_api_key") or cfg.get("OPENROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY", "")
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+        headers["HTTP-Referer"] = "https://github.com/AdityaManojA/ALFRED-MK-IV"
+        headers["X-Title"] = "ALFRED-Mark-IV"
+    elif provider == "openai":
+        key = cfg.get("openai_api_key") or cfg.get("api_key") or os.environ.get("OPENAI_API_KEY", "")
+        if key:
+            headers["Authorization"] = f"Bearer {key}"
+    return headers
+
+
+def _chat_endpoint(url: str) -> str:
+    base = url.rstrip("/")
+    return f"{base}/chat/completions" if base.endswith("/v1") else f"{base}/v1/chat/completions"
+
+
 def ensure_ollama_running(timeout: int = 15) -> bool:
     """
     For Ollama: ping /api/tags; auto-launch 'ollama serve' if not running.
     For OpenAI-compatible providers: just ping /v1/models (server must be started manually).
+    For OpenRouter: verify API key presence.
     Returns True if the LLM server is reachable.
     """
     url, _   = get_llm_settings()
     provider = get_llm_provider()
+
+    if provider == "openrouter":
+        cfg = _load_config()
+        key = cfg.get("openrouter_api_key") or cfg.get("OPENROUTER_API_KEY") or os.environ.get("OPENROUTER_API_KEY", "")
+        if not key:
+            print("[LLM] OpenRouter API key missing. Configure openrouter_api_key in config/api_keys.json.")
+            return False
+        return True
 
     if provider == "openai":
         # OpenAI-compatible servers (LM Studio, LocalAI, etc.) must be started
         # by the user — we just check if they're reachable.
         health = f"{url}/v1/models"
         try:
-            ok = requests.get(health, timeout=5).status_code == 200
+            ok = requests.get(health, headers=_get_headers(provider), timeout=5).status_code == 200
             if ok:
                 print(f"[LLM] OpenAI-compatible server reachable at {url}")
             else:
@@ -139,6 +173,11 @@ def warmup_model(system_prompt: str | None = None) -> bool:
     """
     url, model = get_llm_settings()
     provider   = get_llm_provider()
+
+    if provider == "openrouter":
+        print(f"[LLM] OpenRouter model '{model}' online — warmup skipped.")
+        return True
+
     print(f"[LLM] Warming up '{model}' ({provider})…")
 
     messages: list[dict] = []
@@ -156,7 +195,7 @@ def warmup_model(system_prompt: str | None = None) -> bool:
             "max_tokens": 1,
         }
         try:
-            resp = requests.post(f"{url}/v1/chat/completions", json=payload, timeout=180)
+            resp = requests.post(_chat_endpoint(url), json=payload, headers=_get_headers(provider), timeout=180)
             resp.raise_for_status()
             print(f"[LLM] '{model}' ready (OpenAI-compatible server).")
             return True
@@ -220,7 +259,12 @@ def check_model_available(log: Callable | None = None) -> bool:
 
 def get_llm_settings() -> tuple[str, str]:
     """Returns (base_url, model_name)."""
-    cfg   = _load_config()
+    cfg      = _load_config()
+    provider = get_llm_provider()
+    if provider == "openrouter":
+        url   = cfg.get("openrouter_url") or cfg.get("llm_url") or _DEFAULTS["openrouter_url"]
+        model = cfg.get("openrouter_model") or cfg.get("llm_model") or _DEFAULTS["openrouter_model"]
+        return url.rstrip("/"), model
     url   = cfg.get("llm_url",   _DEFAULTS["llm_url"]).rstrip("/")
     model = cfg.get("llm_model", _DEFAULTS["llm_model"])
     return url, model
@@ -232,7 +276,7 @@ def call_llm(
     timeout:  int = 120,
 ) -> dict:
     """
-    Non-streaming chat request.  Routes to Ollama or OpenAI-compatible backend.
+    Non-streaming chat request. Routes to Ollama, OpenAI, or OpenRouter backend.
 
     Returns:
         {"content": str, "tool_calls": list}
@@ -240,44 +284,47 @@ def call_llm(
     url, model = get_llm_settings()
     provider   = get_llm_provider()
 
-    if provider == "openai":
-        endpoint = f"{url}/v1/chat/completions"
+    if provider in ("openai", "openrouter"):
+        endpoint = _chat_endpoint(url)
+        headers  = _get_headers(provider)
         payload: dict = {
             "model":      model,
             "messages":   messages,
             "stream":     False,
-            "max_tokens": 150,
+            "max_tokens": 300,
         }
         if tools:
             payload["tools"]       = tools
             payload["tool_choice"] = "auto"
         try:
-            resp = requests.post(endpoint, json=payload, timeout=timeout)
+            resp = requests.post(endpoint, json=payload, headers=headers, timeout=timeout)
             resp.raise_for_status()
             choice = resp.json().get("choices", [{}])[0]
             msg    = choice.get("message", {})
-            # OpenAI tool_calls format → normalise to Ollama-style
+            # OpenAI / OpenRouter tool_calls format → normalise
             raw_tc  = msg.get("tool_calls") or []
-            tc_list = [
-                {
+            tc_list = []
+            for t in raw_tc:
+                fn = t.get("function", {})
+                args = fn.get("arguments", {})
+                if isinstance(args, str):
+                    try:
+                        args = json.loads(args)
+                    except Exception:
+                        pass
+                tc_list.append({
                     "id":       t.get("id", ""),
                     "function": {
-                        "name":      t["function"]["name"],
-                        "arguments": (
-                            json.loads(t["function"]["arguments"])
-                            if isinstance(t["function"].get("arguments"), str)
-                            else t["function"].get("arguments", {})
-                        ),
+                        "name":      fn.get("name", ""),
+                        "arguments": args,
                     },
-                }
-                for t in raw_tc
-            ]
+                })
             return {
                 "content":    (msg.get("content") or "").strip(),
                 "tool_calls": tc_list,
             }
         except Exception as e:
-            raise RuntimeError(f"OpenAI-compatible LLM call failed: {e}")
+            raise RuntimeError(f"{provider.capitalize()} LLM call failed: {e}")
 
     # ── Ollama ──────────────────────────────────────────────────────────────
     endpoint = f"{url}/api/chat"
@@ -337,9 +384,10 @@ def call_llm_text(
     """
     Simple text-only generation (no tools).
     Used by planner, executor, error_handler, code_helper, dev_agent.
+    Routes to Ollama, OpenAI, or OpenRouter backend.
     """
     url, default_model = get_llm_settings()
-    endpoint = f"{url}/api/chat"
+    provider = get_llm_provider()
     m        = model or default_model
 
     messages: list[dict] = []
@@ -347,6 +395,24 @@ def call_llm_text(
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
 
+    if provider in ("openai", "openrouter"):
+        endpoint = _chat_endpoint(url)
+        headers  = _get_headers(provider)
+        payload = {
+            "model":      m,
+            "messages":   messages,
+            "stream":     False,
+            "max_tokens": 600,
+        }
+        try:
+            resp = requests.post(endpoint, json=payload, headers=headers, timeout=timeout)
+            resp.raise_for_status()
+            return (resp.json().get("choices", [{}])[0].get("message", {}).get("content") or "").strip()
+        except Exception as e:
+            raise RuntimeError(f"{provider.capitalize()} text call failed: {e}")
+
+    # ── Ollama ──────────────────────────────────────────────────────────────
+    endpoint = f"{url}/api/chat"
     payload = {"model": m, "messages": messages, "stream": False, "keep_alive": -1, "options": {"num_predict": 600}}
 
     try:
@@ -375,26 +441,28 @@ def _stream_openai(
     timeout:  int,
 ) -> Generator[dict, None, None]:
     """
-    Streaming backend for OpenAI-compatible servers (LM Studio, LocalAI, Jan…).
+    Streaming backend for OpenAI and OpenRouter endpoints.
 
     Parses Server-Sent Events (SSE) and accumulates streaming tool-call fragments
     so the output format is identical to the Ollama backend.
     """
     url, model = get_llm_settings()
-    endpoint   = f"{url}/v1/chat/completions"
+    provider   = get_llm_provider()
+    endpoint   = _chat_endpoint(url)
+    headers    = _get_headers(provider)
 
     payload: dict = {
         "model":      model,
         "messages":   messages,
         "stream":     True,
-        "max_tokens": 150,
+        "max_tokens": 300,
     }
     if tools:
         payload["tools"]       = tools
         payload["tool_choice"] = "auto"
 
     try:
-        with requests.post(endpoint, json=payload, timeout=timeout, stream=True) as resp:
+        with requests.post(endpoint, json=payload, headers=headers, timeout=timeout, stream=True) as resp:
             resp.raise_for_status()
             full_content = ""
             buf          = ""
@@ -501,7 +569,7 @@ def call_llm_stream(
     Tool calls always appear in the final "done" event.
     """
     provider = get_llm_provider()
-    if provider == "openai":
+    if provider in ("openai", "openrouter"):
         yield from _stream_openai(messages, tools, timeout)
         return
 

@@ -156,13 +156,43 @@ def _execute_tool(tool_name: str, parameters: Dict[str, Any], ctx: Optional[Dict
     """
     Dispatch a single tool call to action handler or system helper.
     """
+    params = dict(parameters) if isinstance(parameters, dict) else {}
+    tn = str(tool_name).strip().lower()
+
+    # Tool alias / parameter normalization
+    if tn in ("open_app", "launch_app", "app"):
+        tool_name = "open_app"
+        if "app" in params and "app_name" not in params:
+            params["app_name"] = params["app"]
+        if "name" in params and "app_name" not in params:
+            params["app_name"] = params["name"]
+    elif tn in ("audio_core", "tron_music", "background_music"):
+        tool_name = "audio_core"
+    elif tn in ("spotify", "spotify_control"):
+        tool_name = "spotify_control"
+        if "song" in params and "query" not in params:
+            params["query"] = params["song"]
+        if "track" in params and "query" not in params:
+            params["query"] = params["track"]
+    elif tn in ("computer_settings", "settings"):
+        tool_name = "computer_settings"
+        if "volume" in params and "value" not in params:
+            params["value"] = params["volume"]
+        if "target" in params and "value" not in params:
+            params["value"] = params["target"]
+    elif tn == "clear_chat":
+        if ctx and ctx.get("player") and hasattr(ctx["player"], "clear_chat"):
+            ctx["player"].clear_chat()
+            return "Chat cleared."
+        return "Cleared chat."
+
     # 1. Custom execution callback in ctx (e.g. from main.py / test harness)
     if ctx and callable(ctx.get("execute_tool")):
-        return ctx["execute_tool"](tool_name, parameters)
+        return ctx["execute_tool"](tool_name, params)
 
     # 2. Built-in protocol helpers (terminal_admin, open_terminal)
     if tool_name in ("terminal_admin", "powershell_admin"):
-        cmd = parameters.get("command", "")
+        cmd = params.get("command", "")
         if _OS == "Windows":
             args = f"-NoExit -Command \"{cmd}\"" if cmd else "-NoExit"
             subprocess.Popen([
@@ -175,7 +205,7 @@ def _execute_tool(tool_name: str, parameters: Dict[str, Any], ctx: Optional[Dict
             return f"Opened root terminal with command: {cmd}"
 
     if tool_name in ("open_terminal", "terminal"):
-        cmd = parameters.get("command", "")
+        cmd = params.get("command", "")
         if _OS == "Windows":
             if cmd:
                 subprocess.Popen(["powershell.exe", "-NoExit", "-Command", cmd])
@@ -188,21 +218,21 @@ def _execute_tool(tool_name: str, parameters: Dict[str, Any], ctx: Optional[Dict
             return f"Opened terminal: {cmd}"
 
     if tool_name == "sleep":
-        sec = float(parameters.get("seconds", 1.0))
+        sec = float(params.get("seconds", 1.0))
         time.sleep(sec)
         return f"Slept {sec}s"
 
     # 3. Action Registry dispatch
     registry = get_action_registry()
     if registry and registry.has(tool_name):
-        return registry.run(tool_name, parameters, ctx=ctx or {})
+        return registry.run(tool_name, params, ctx=ctx or {})
 
     # 4. Direct module import fallback
     try:
         mod = __import__(f"actions.{tool_name}", fromlist=[tool_name])
         handler = getattr(mod, tool_name, None) or getattr(mod, "TOOL", {}).get("handler")
         if callable(handler):
-            return handler(parameters)
+            return handler(params, player=ctx.get("player") if ctx else None, speak=ctx.get("speak") if ctx else None)
     except Exception:
         pass
 
@@ -364,7 +394,23 @@ def create_protocol(
     if not clean_name:
         return {"status": "error", "message": "Invalid workflow name."}
 
-    if not steps:
+    # Normalize steps if stringified
+    if isinstance(steps, str):
+        try:
+            import json
+            steps = json.loads(steps)
+        except Exception:
+            steps = []
+
+    # Normalize triggers if stringified
+    if isinstance(triggers, str):
+        try:
+            import json
+            triggers = json.loads(triggers)
+        except Exception:
+            triggers = [t.strip() for t in triggers.split(",") if t.strip()]
+
+    if not steps or not isinstance(steps, list):
         return {"status": "error", "message": "Workflow must have at least one step."}
 
     protocol_def: Dict[str, Any] = {
@@ -388,7 +434,7 @@ def create_protocol(
             f"Add new protocol '{clean_name}' with {len(steps)} step(s) and "
             f"triggers: {protocol_def['triggers']}"
         )
-        msg = confirm.request(key=key, title=title, detail=detail, on_confirm=_do_save)
+        msg = confirm.request(key=key, title=title, detail=detail, run=_do_save)
         return {
             "status": "pending_confirmation",
             "confirmation_key": key,

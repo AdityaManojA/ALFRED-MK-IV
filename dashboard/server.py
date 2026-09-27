@@ -469,8 +469,10 @@ class DashboardServer:
         self._wake_callback               = None
         self._connect_callback            = None
         self._clear_chat_callback          = None
+        self._action_callback              = None
         self._pending_keys: dict[str, float] = {}
-        self._device_sessions: dict[str, dict] = {}  # device_token → {session_key}
+        self._device_sessions_file        = BASE_DIR / "config" / "device_sessions.json"
+        self._device_sessions: dict[str, dict] = self._load_device_sessions()
         self._phone_audio_queue: asyncio.Queue    = asyncio.Queue(maxsize=200)
         self._audio_queue: asyncio.Queue          = asyncio.Queue(maxsize=200)
         self._background_tasks: dict[str, dict]   = {}
@@ -478,6 +480,28 @@ class DashboardServer:
         self._login_html                  = _read("login.html")
         self._app_html                    = _read("app.html")
         self.app                          = self._build_app()
+
+    def _load_device_sessions(self) -> dict[str, dict]:
+        try:
+            if self._device_sessions_file.exists():
+                data = json.loads(self._device_sessions_file.read_text(encoding="utf-8"))
+                if isinstance(data, dict):
+                    # Pre-derive AES keys for persisted sessions
+                    for dev_tok, s_info in data.items():
+                        skey = s_info.get("session_key")
+                        if skey:
+                            self._aes_key(skey)
+                    return data
+        except Exception as e:
+            print(f"[Dashboard] Error loading device sessions: {e}")
+        return {}
+
+    def _save_device_sessions(self) -> None:
+        try:
+            self._device_sessions_file.parent.mkdir(parents=True, exist_ok=True)
+            self._device_sessions_file.write_text(json.dumps(self._device_sessions, indent=2), encoding="utf-8")
+        except Exception as e:
+            print(f"[Dashboard] Error saving device sessions: {e}")
 
     # ── one-time key management ───────────────────────────────────────────
 
@@ -527,6 +551,9 @@ class DashboardServer:
 
     def set_clear_chat_callback(self, fn) -> None:
         self._clear_chat_callback = fn
+
+    def set_action_callback(self, fn) -> None:
+        self._action_callback = fn
 
     # ── background tasks & broadcast ────────────────────────────────────
 
@@ -579,7 +606,17 @@ class DashboardServer:
 
         def _auth(req: Request) -> bool:
             tok = req.headers.get("authorization", "").removeprefix("Bearer ").strip()
-            return bool(tok) and tok in self._tokens
+            if tok and tok in self._tokens:
+                return True
+            dev_tok = req.headers.get("x-device-token", "").strip()
+            if dev_tok and dev_tok in self._device_sessions:
+                skey = self._device_sessions[dev_tok]["session_key"]
+                if tok:
+                    self._tokens.add(tok)
+                    self._token_keys[tok] = skey
+                    self._aes_key(skey)
+                return True
+            return False
 
         # serve CryptoJS from local cache, fallback to CDN redirect
         @app.get("/static/crypto.js")
@@ -604,7 +641,7 @@ class DashboardServer:
             except Exception:
                 raw_html = self._app_html
 
-            theme_color = "#00d4ff"
+            theme_color = "#8e9bff"
             try:
                 cfg_path = BASE_DIR / "config" / "api_keys.json"
                 if cfg_path.exists():
@@ -627,16 +664,19 @@ class DashboardServer:
             if entered in self._pending_keys and self._pending_keys[entered] > now:
                 del self._pending_keys[entered]          # one-time use
                 tok = secrets.token_urlsafe(32)
+                dev_tok = secrets.token_urlsafe(32)
                 self._tokens.add(tok)
                 self._token_keys[tok] = entered
                 self._aes_key(entered)                   # pre-derive & cache
+                self._device_sessions[dev_tok] = {"session_key": entered}
+                self._save_device_sessions()
                 if self._connect_callback:
                     self._connect_callback()
                 asyncio.create_task(self.broadcast(
                     {"type": "sys", "text": "Remote connection established."}
                 ))
-                # Bearer token in response body — no cookies needed (works on any browser/HTTP)
-                return JSONResponse({"ok": True, "token": tok})
+                # Bearer token and device token in response body for persistent pairing
+                return JSONResponse({"ok": True, "token": tok, "device_token": dev_tok, "key": entered})
             return JSONResponse({"ok": False, "error": "Invalid or expired key"},
                                 status_code=401)
 
@@ -663,6 +703,7 @@ class DashboardServer:
             self._token_keys[tok] = key
             self._aes_key(key)
             self._device_sessions[dev_tok] = {"session_key": key}
+            self._save_device_sessions()
 
             if self._connect_callback:
                 self._connect_callback()
@@ -681,6 +722,8 @@ class DashboardServer:
 <script>
   sessionStorage.setItem('jarvis_token','{tok}');
   sessionStorage.setItem('jarvis_key','{key}');
+  localStorage.setItem('jarvis_token','{tok}');
+  localStorage.setItem('jarvis_key','{key}');
   localStorage.setItem('jarvis_device_token','{dev_tok}');
   setTimeout(function(){{location.replace('/')}},400);
 </script>
@@ -707,7 +750,7 @@ class DashboardServer:
             asyncio.create_task(self.broadcast(
                 {"type": "sys", "text": "Known device reconnected automatically."}
             ))
-            return JSONResponse({"ok": True, "token": tok, "key": session_key})
+            return JSONResponse({"ok": True, "token": tok, "key": session_key, "device_token": dev_tok})
 
         @app.post("/api/revoke-devices")
         async def revoke_devices(req: Request):
@@ -716,7 +759,44 @@ class DashboardServer:
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             count = len(self._device_sessions)
             self._device_sessions.clear()
+            self._save_device_sessions()
             return JSONResponse({"ok": True, "revoked": count})
+
+        @app.post("/api/action")
+        async def action_ep(req: Request):
+            """Execute tactical actions directly from mobile action buttons."""
+            if not _auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            try:
+                body = await req.json()
+            except Exception:
+                return JSONResponse({"error": "Invalid JSON"}, status_code=400)
+
+            action = (body.get("action") or "").strip()
+            params = body.get("params") or {}
+            if not action:
+                return JSONResponse({"error": "Missing action"}, status_code=400)
+
+            if self._action_callback:
+                try:
+                    res = await self._action_callback(action, params)
+                    return JSONResponse(res if isinstance(res, dict) else {"ok": True, "result": res})
+                except Exception as e:
+                    return JSONResponse({"ok": False, "error": str(e)}, status_code=500)
+            return JSONResponse({"ok": False, "error": "No action handler configured"}, status_code=503)
+
+        @app.get("/api/status")
+        async def status_ep(req: Request):
+            """Return current deck state (audio core state, mute status, etc.)."""
+            if not _auth(req):
+                return JSONResponse({"error": "Unauthorized"}, status_code=401)
+            if self._action_callback:
+                try:
+                    res = await self._action_callback("get_deck_state", {})
+                    return JSONResponse(res if isinstance(res, dict) else {"ok": True, "state": res})
+                except Exception as e:
+                    return JSONResponse({"ok": False, "error": str(e)})
+            return JSONResponse({"ok": True, "audio_core": {}, "muted": False})
 
         @app.post("/api/command")
         async def command(req: Request):
@@ -758,12 +838,26 @@ class DashboardServer:
                     print(f"[Dashboard] clear_chat_callback error: {e}")
             return JSONResponse({"ok": True})
 
+        def _resolve_ws_auth(token: str = "", device_token: str = "") -> str | None:
+            tok = (token or "").strip()
+            if tok and tok in self._tokens:
+                return tok
+            dtok = (device_token or "").strip()
+            if dtok and dtok in self._device_sessions:
+                skey = self._device_sessions[dtok]["session_key"]
+                new_tok = tok if tok else secrets.token_urlsafe(32)
+                self._tokens.add(new_tok)
+                self._token_keys[new_tok] = skey
+                self._aes_key(skey)
+                return new_tok
+            return None
+
         # ── Phone mic real-time audio → Gemini Live ──────────────────────────
 
         @app.websocket("/ws/phone-audio")
-        async def phone_audio_ws(websocket: WebSocket, token: str = ""):
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+        async def phone_audio_ws(websocket: WebSocket, token: str = "", device_token: str = ""):
+            tok = _resolve_ws_auth(token, device_token)
+            if not tok:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()
@@ -863,10 +957,10 @@ class DashboardServer:
             return JSONResponse({"files": files})
 
         @app.get("/uploads/{filename}")
-        async def download_file(filename: str, token: str = ""):
+        async def download_file(filename: str, token: str = "", device_token: str = ""):
             # Auth via query param — browser <a download> can't send custom headers
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+            tok = _resolve_ws_auth(token, device_token)
+            if not tok:
                 return JSONResponse({"error": "Unauthorized"}, status_code=401)
             safe = re.sub(r'[/\\]', '', filename)
             path = self._uploads_dir / safe
@@ -879,9 +973,9 @@ class DashboardServer:
             return JSONResponse({"ok": True, "tasks": list(self._background_tasks.values())})
 
         @app.websocket("/ws")
-        async def ws_ep(websocket: WebSocket, token: str = ""):
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+        async def ws_ep(websocket: WebSocket, token: str = "", device_token: str = ""):
+            tok = _resolve_ws_auth(token, device_token)
+            if not tok:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()
@@ -894,13 +988,25 @@ class DashboardServer:
             try:
                 while True:
                     data = await websocket.receive_json()
-                    if data.get("type") == "command":
+                    mtype = data.get("type")
+                    if mtype == "ping":
+                        await websocket.send_json({"type": "pong", "ts": time.time()})
+                    elif mtype == "command":
                         enc = data.get("enc", "")
                         t   = self._decrypt(tok, enc) if enc else (data.get("text") or "").strip()
                         if t:
                             await self._command_queue.put(t)
                             if self._wake_callback:
                                 self._wake_callback()
+                    elif mtype == "action":
+                        act = data.get("action")
+                        prm = data.get("params") or {}
+                        if act and self._action_callback:
+                            try:
+                                a_res = await self._action_callback(act, prm)
+                                await websocket.send_json({"type": "action_result", "action": act, "data": a_res})
+                            except Exception as ex:
+                                await websocket.send_json({"type": "action_result", "action": act, "error": str(ex)})
             except WebSocketDisconnect:
                 pass
             finally:
@@ -908,14 +1014,14 @@ class DashboardServer:
 
         # ── Bidirectional audio WebSocket ─────────────────────────────────────
         @app.websocket("/ws/audio")
-        async def audio_ws(websocket: WebSocket, token: str = ""):
+        async def audio_ws(websocket: WebSocket, token: str = "", device_token: str = ""):
             """WebSocket endpoint for bidirectional audio streaming.
 
             Receives: PCM 16kHz audio chunks from browser mic
             Sends:    PCM 16kHz audio chunks of ALFRED's synthesized audio
             """
-            tok = token.strip()
-            if not tok or tok not in self._tokens:
+            tok = _resolve_ws_auth(token, device_token)
+            if not tok:
                 await websocket.close(code=4001)
                 return
             await websocket.accept()

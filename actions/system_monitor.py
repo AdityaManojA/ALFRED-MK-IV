@@ -443,7 +443,7 @@ def terminate_process(pid: int, ask_confirmation: bool = True) -> Dict[str, Any]
             key = f"terminate_proc_{pid}_{int(time.time())}"
             title = f"Terminate Process: {name} (PID: {pid})"
             detail = f"Confirm immediate termination of process <{pid}:{name}>."
-            msg = confirm.request(key=key, title=title, detail=detail, on_confirm=_do_terminate)
+            msg = confirm.request(key=key, title=title, detail=detail, run=_do_terminate)
             return {
                 "status": "pending_confirmation",
                 "confirmation_key": key,

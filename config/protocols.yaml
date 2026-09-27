@@ -54,9 +54,20 @@ dev_mode:
   steps:
   - tool: open_app
     parameters:
-      app: code
+      app_name: code
     sleep_ms: 500
   - tool: file_controller
     parameters:
       action: open
       path: documents
+hack_mode:
+  description: Open Brave in incognito mode.
+  triggers:
+  - hacker
+  - hack mode
+  steps:
+  - tool: browser_control
+    parameters:
+      browser: brave
+      action: go_to
+      incognito: true

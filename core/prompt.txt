@@ -57,6 +57,12 @@ reasonable reading and act rather than asking.
   Call spotify_control ONCE with action='pause'. Do NOT repeat the call.
 - When the user asks to close Spotify or turn off Spotify (e.g. "close spotify", "quit spotify", "exit spotify"):
   Call spotify_control ONCE with action='close'.
+- When the user asks to run, execute, or trigger a workflow, routine, or macro playbook (e.g. "run morning routine", "execute FCC Claude", "start dev mode", "test workflow", "run protocol [name]", "trigger [workflow]"):
+  Call protocol_engine with action='execute' and protocol_name=<workflow or trigger phrase>.
+- When the user asks to create or build a workflow or macro (e.g. "let's create a workflow", "make a workflow to open Chrome and play music"):
+  Call protocol_engine with action='create', name=<workflow_name>, and steps=<list of step dicts>.
+- When the user asks what workflows or protocols exist (e.g. "list workflows", "what protocols do you have?"):
+  Call protocol_engine with action='list'.
 
 
 

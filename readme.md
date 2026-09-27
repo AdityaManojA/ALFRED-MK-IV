@@ -98,6 +98,29 @@ Open `config/api_keys.json` in the root folder of ALFRED. Set `llm_provider`, `l
 }
 ```
 
+##### Configuration Template for OpenRouter API (Frontier Multi-Model Gateway):
+```json
+{
+    "llm_provider": "openrouter",
+    "openrouter_api_key": "sk-or-v1-YOUR_OPENROUTER_KEY",
+    "openrouter_model": "anthropic/claude-3.5-sonnet",
+    "assistant_name": "ALFRED",
+    "user_name": "Master Wayne",
+    "ui_color": "#e5a93b",
+    "voice_name": "Charon",
+    "wake_word_enabled": true,
+    "push_to_talk_enabled": true
+}
+```
+* **Frontier Model Variety**: OpenRouter provides unified access to top frontier models including:
+  * `anthropic/claude-3.5-sonnet` (Deep analytical reasoning and code execution)
+  * `google/gemini-2.0-flash-001` (Sub-second response speed)
+  * `meta-llama/llama-3.3-70b-instruct` (State-of-the-art open weights)
+  * `deepseek/deepseek-r1` (Reinforcement learning chain-of-thought)
+  * `openai/gpt-4o` (Multi-modal intelligence)
+  * `openrouter/auto` (Dynamic intelligent routing)
+* **First-Run Setup Integration**: You can also configure your OpenRouter API key and model directly in the GUI during the initial startup system overlay (`◈ SYSTEM INITIALISATION // OPERATOR & NEURAL CONFIG`).
+
 ---
 
 #### Step 3: Launch ALFRED & Verify Connection
@@ -610,7 +633,7 @@ python setup.py
 python main.py
 ```
 
-*On the first launch, if using Gemini, enter your free API key in the setup dialog. If running locally with Ollama, simply point `config/api_keys.json` to your local host.*
+*On the first launch, ALFRED automatically prompts you with the system initialisation overlay where you can set your Operator callsign, Assistant name, and choose between Gemini Live, Local Ollama, LM Studio, or OpenRouter API.*
 
 ---
 
@@ -624,7 +647,10 @@ python main.py
     "voice_name": "Charon",
     "wake_word_enabled": false,
     "push_to_talk_enabled": true,
-    "llm_provider": "ollama",
+    "llm_provider": "openrouter",
+    "openrouter_api_key": "sk-or-v1-YOUR_OPENROUTER_KEY",
+    "openrouter_model": "anthropic/claude-3.5-sonnet",
+    "gemini_api_key": "AIzaSyYOUR_GEMINI_KEY",
     "llm_url": "http://localhost:11434",
     "llm_model": "llama3.2",
     "app_icon": "Icons/Classic Bat.png",

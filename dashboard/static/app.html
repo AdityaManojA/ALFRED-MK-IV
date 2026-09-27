@@ -1,33 +1,65 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ALFRED — Wayne Mark-II Quantum Terminal</title>
+  <title>ALFRED — Wayne Mark-IV Tactical Uplink</title>
   <script src="/static/crypto.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-    :root {
-      --bg:        #02060d;
-      --surface:   rgba(6, 16, 28, 0.72);
-      --border:    rgba(0, 240, 255, 0.18);
-      --border-hi: rgba(0, 240, 255, 0.45);
-      --accent:    #00f0ff;
-      --accent2:   #0088ff;
-      --adim:      rgba(0, 240, 255, 0.12);
-      --text:      #eaf6ff;
-      --muted:     #6b829c;
-      --green:     #00ff9d;
-      --gdim:      rgba(0, 255, 157, 0.14);
-      --err:       #ff3b5c;
+    
+    /* ── RETRO-FUTURISTIC CRT PALETTES (DESKTOP UI PARITY) ── */
+    :root, body[data-theme="dossier"], body[data-theme="batcave"] {
+      --bg:        #090a12;
+      --surface:   rgba(13, 15, 30, 0.92);
+      --border:    rgba(80, 91, 181, 0.32);
+      --border-hi: #505bb5;
+      --accent:    #8e9bff;
+      --accent2:   #ff7390;
+      --adim:      rgba(142, 155, 255, 0.16);
+      --text:      #e8ecff;
+      --muted:     #707ab0;
+      --green:     #4ef2bb;
+      --gdim:      rgba(78, 242, 187, 0.16);
+      --err:       #ff2a55;
     }
 
-    /* ── BATMAN BEYOND NEO-GOTHAM THEME OVERRIDES ── */
+    /* ── BANE MODE / VECTOR THEME ── */
+    body[data-theme="vector"] {
+      --bg:        #060d07;
+      --surface:   rgba(9, 23, 11, 0.92);
+      --border:    rgba(72, 163, 85, 0.35);
+      --border-hi: #a8ff3e;
+      --accent:    #a8ff3e;
+      --accent2:   #ffaa33;
+      --adim:      rgba(168, 255, 62, 0.16);
+      --text:      #dcfc9f;
+      --muted:     #588554;
+      --green:     #a8ff3e;
+      --gdim:      rgba(168, 255, 62, 0.16);
+      --err:       #ff3838;
+      background: radial-gradient(circle at 50% 10%, #0d2613 0%, #060d07 65%, #030804 100%) !important;
+    }
+    body[data-theme="vector"] .pill.on {
+      background: rgba(168, 255, 62, 0.16);
+      border-color: rgba(168, 255, 62, 0.5);
+      color: #a8ff3e;
+      box-shadow: 0 0 14px rgba(168, 255, 62, 0.25);
+    }
+    body[data-theme="vector"] .pill.on .dot {
+      background: #a8ff3e;
+      box-shadow: 0 0 8px #a8ff3e;
+    }
+    body[data-theme="vector"] .msg-j {
+      border-left: 3.5px solid #a8ff3e !important;
+    }
+
+    /* ── BATMAN BEYOND NEO-GOTHAM THEME ── */
     body[data-theme="beyond"] {
       --bg:        #070103;
-      --surface:   rgba(18, 3, 7, 0.88);
-      --border:    rgba(255, 0, 55, 0.28);
-      --border-hi: rgba(255, 0, 55, 0.65);
+      --surface:   rgba(18, 3, 7, 0.92);
+      --border:    rgba(255, 0, 55, 0.35);
+      --border-hi: #ff0037;
       --accent:    #ff0037;
       --accent2:   #00d4ff;
       --adim:      rgba(255, 0, 55, 0.16);
@@ -36,27 +68,7 @@
       --green:     #00d4ff;
       --gdim:      rgba(0, 212, 255, 0.15);
       --err:       #ff0037;
-      background: radial-gradient(circle at 50% 10%, #220309 0%, #0d0104 65%, #050002 100%);
-      color: var(--text);
-    }
-    body[data-theme="beyond"]::before {
-      background-image: 
-        radial-gradient(rgba(255, 0, 55, 0.08) 1px, transparent 1px),
-        radial-gradient(rgba(0, 212, 255, 0.04) 1px, transparent 1px);
-    }
-    body[data-theme="beyond"] header {
-      background: rgba(14, 2, 5, 0.94);
-      border-bottom: 1px solid rgba(255, 0, 55, 0.35);
-      box-shadow: 0 4px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 0, 55, 0.15);
-    }
-    body[data-theme="beyond"] .header-reactor {
-      filter: drop-shadow(0 0 10px rgba(255, 0, 55, 0.65));
-    }
-    body[data-theme="beyond"] .logo {
-      text-shadow: 0 0 14px rgba(255, 0, 55, 0.7);
-    }
-    body[data-theme="beyond"] .sub-brand {
-      color: var(--muted);
+      background: radial-gradient(circle at 50% 10%, #220309 0%, #0d0104 65%, #050002 100%) !important;
     }
     body[data-theme="beyond"] .pill.on {
       background: rgba(255, 0, 55, 0.16);
@@ -68,169 +80,40 @@
       background: #ff0037;
       box-shadow: 0 0 8px #ff0037;
     }
-    body[data-theme="beyond"] .tts-btn {
-      background: rgba(255, 0, 55, 0.08);
-      border: 1px solid rgba(255, 0, 55, 0.35);
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] .tts-btn:hover {
-      background: rgba(255, 0, 55, 0.2);
-      border-color: #ff0037;
-      color: #ffffff;
-      box-shadow: 0 0 12px rgba(255, 0, 55, 0.4);
-    }
-    body[data-theme="beyond"] .tts-btn.on {
-      background: rgba(255, 0, 55, 0.16);
-      border-color: rgba(255, 0, 55, 0.5);
-      color: #ff0037;
-      box-shadow: 0 0 12px rgba(255, 0, 55, 0.3);
-    }
-    body[data-theme="beyond"] .theme-btn {
-      background: rgba(255, 0, 55, 0.15);
-      border-color: rgba(255, 0, 55, 0.5);
-      color: #ff0037;
-      box-shadow: 0 0 12px rgba(255, 0, 55, 0.3);
-    }
-    body[data-theme="beyond"] .theme-btn:hover {
-      background: rgba(255, 0, 55, 0.28);
-      border-color: #ff0037;
-      box-shadow: 0 0 16px rgba(255, 0, 55, 0.55);
-    }
-    body[data-theme="beyond"] .view-tabs {
-      background: rgba(12, 2, 4, 0.88);
-      border-bottom: 1px solid rgba(255, 0, 55, 0.25);
-    }
-    body[data-theme="beyond"] .view-tab {
-      border: 1px solid rgba(255, 0, 55, 0.22);
-    }
-    body[data-theme="beyond"] .view-tab.active {
-      background: linear-gradient(135deg, rgba(255, 0, 55, 0.32), rgba(180, 0, 40, 0.18));
-      border-color: #ff0037;
-      box-shadow: 0 0 14px rgba(255, 0, 55, 0.4);
-      color: #ffffff;
-    }
-    body[data-theme="beyond"] .view-tab:hover {
-      border-color: rgba(255, 0, 55, 0.55);
-      background: rgba(255, 0, 55, 0.12);
-    }
-    body[data-theme="beyond"] .tab-badge {
-      background: rgba(255, 0, 55, 0.25);
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] .feed-welcome {
-      background: rgba(20, 3, 7, 0.85);
-      border: 1px solid rgba(255, 0, 55, 0.32);
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6), 0 0 16px rgba(255, 0, 55, 0.15);
-    }
-    body[data-theme="beyond"] .welcome-badge {
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] .welcome-title {
-      text-shadow: 0 0 12px rgba(255, 0, 55, 0.7);
-    }
-    body[data-theme="beyond"] .welcome-hints {
-      color: #ff0037;
-    }
     body[data-theme="beyond"] .msg-j {
-      background: rgba(22, 3, 8, 0.90);
-      border: 1px solid rgba(255, 0, 55, 0.38);
-      border-left: 3.5px solid #ff0037;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 0, 55, 0.25);
+      border-left: 3.5px solid #ff0037 !important;
     }
-    body[data-theme="beyond"] .msg-j .lbl {
-      color: #ff0037;
-      text-shadow: 0 0 8px rgba(255, 0, 55, 0.7);
+
+    /* ── WAYNE GOLD THEME ── */
+    body[data-theme="wayne"] {
+      --bg:        #0b0906;
+      --surface:   rgba(20, 16, 8, 0.92);
+      --border:    rgba(229, 169, 59, 0.35);
+      --border-hi: #e5a93b;
+      --accent:    #e5a93b;
+      --accent2:   #4ef2bb;
+      --adim:      rgba(229, 169, 59, 0.16);
+      --text:      #fff5df;
+      --muted:     #8c764a;
+      --green:     #4ef2bb;
+      --gdim:      rgba(78, 242, 187, 0.16);
+      --err:       #ff2a55;
+      background: radial-gradient(circle at 50% 10%, #291e0a 0%, #0b0906 65%, #050402 100%) !important;
     }
-    body[data-theme="beyond"] .msg-u {
-      background: rgba(16, 5, 12, 0.90);
-      border: 1px solid rgba(0, 212, 255, 0.32);
-      border-right: 3.5px solid #00d4ff;
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(0, 212, 255, 0.2);
+    body[data-theme="wayne"] .pill.on {
+      background: rgba(229, 169, 59, 0.16);
+      border-color: rgba(229, 169, 59, 0.5);
+      color: #e5a93b;
+      box-shadow: 0 0 14px rgba(229, 169, 59, 0.25);
     }
-    body[data-theme="beyond"] .msg-sys {
-      background: rgba(255, 0, 55, 0.08);
-      border: 1px dashed rgba(255, 0, 55, 0.4);
-      color: #ff0037;
+    body[data-theme="wayne"] .pill.on .dot {
+      background: #e5a93b;
+      box-shadow: 0 0 8px #e5a93b;
     }
-    body[data-theme="beyond"] .msg-telemetry {
-      background: rgba(20, 3, 7, 0.85);
-      border-color: rgba(255, 0, 55, 0.25);
+    body[data-theme="wayne"] .msg-j {
+      border-left: 3.5px solid #e5a93b !important;
     }
-    body[data-theme="beyond"] .tag-red {
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] #reactor-panel {
-      background: linear-gradient(180deg, rgba(22, 3, 8, 0.85) 0%, rgba(7, 1, 3, 0) 100%);
-      border-bottom: 1px solid rgba(255, 0, 55, 0.2);
-    }
-    body[data-theme="beyond"] #main-reactor-canvas {
-      filter: drop-shadow(0 0 22px rgba(255, 0, 55, 0.55));
-    }
-    body[data-theme="beyond"] .reactor-status-tag {
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] footer {
-      background: rgba(14, 2, 5, 0.94);
-      border-top: 1px solid rgba(255, 0, 55, 0.3);
-      box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 0, 55, 0.12);
-    }
-    body[data-theme="beyond"] #inp {
-      background: rgba(24, 4, 9, 0.75);
-      border: 1.5px solid rgba(255, 0, 55, 0.3);
-    }
-    body[data-theme="beyond"] #inp:focus {
-      border-color: #ff0037;
-      background: rgba(255, 0, 55, 0.08);
-      box-shadow: 0 0 18px rgba(255, 0, 55, 0.35), inset 0 0 10px rgba(255, 0, 55, 0.12);
-    }
-    body[data-theme="beyond"] .btn-send {
-      background: linear-gradient(135deg, #ff0037 0%, #b80028 100%);
-      color: #ffffff;
-      box-shadow: 0 4px 18px rgba(255, 0, 55, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.4);
-    }
-    body[data-theme="beyond"] .btn-send:hover {
-      box-shadow: 0 6px 24px rgba(255, 0, 55, 0.75);
-    }
-    body[data-theme="beyond"] .btn-attach:hover,
-    body[data-theme="beyond"] #mic-btn:hover {
-      border-color: #ff0037;
-      color: #ff0037;
-      background: rgba(255, 0, 55, 0.12);
-      box-shadow: 0 0 14px rgba(255, 0, 55, 0.25);
-    }
-    body[data-theme="beyond"] .btn-clear-chat {
-      background: rgba(255, 0, 55, 0.12);
-      border-color: rgba(255, 0, 55, 0.45);
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] .btn-clear-chat:hover {
-      background: rgba(255, 0, 55, 0.3);
-      border-color: #ff0037;
-      color: #ffffff;
-      box-shadow: 0 0 16px rgba(255, 0, 55, 0.6);
-    }
-    body[data-theme="beyond"] .intel-card {
-      background: rgba(20, 3, 7, 0.88);
-      border-left: 3px solid #ff0037;
-    }
-    body[data-theme="beyond"] .intel-title {
-      color: #ff0037;
-    }
-    body[data-theme="beyond"] .intel-btn:hover {
-      background: rgba(255, 0, 55, 0.2);
-      border-color: #ff0037;
-      color: #ffffff;
-    }
-    body[data-theme="beyond"] #toast {
-      background: rgba(20, 3, 7, 0.95);
-      border-color: #ff0037;
-      color: #ff0037;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7), 0 0 20px rgba(255, 0, 55, 0.35);
-    }
-    body[data-theme="beyond"] main::-webkit-scrollbar-thumb,
-    body[data-theme="beyond"] #intel-vault::-webkit-scrollbar-thumb {
-      background: rgba(255, 0, 55, 0.25);
-    }
+
     html {
       height: 100%;
       height: -webkit-fill-available;
@@ -240,9 +123,9 @@
       height: 100dvh;
       min-height: 100%;
       min-height: -webkit-fill-available;
-      background: radial-gradient(circle at 50% 10%, #061526 0%, #02070f 65%, #010307 100%);
+      background: radial-gradient(circle at 50% 10%, #121528 0%, #090a12 65%, #05060a 100%);
       color: var(--text);
-      font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Segoe UI', Roboto, sans-serif;
+      font-family: 'Cascadia Code', 'SF Mono', Consolas, 'Fira Code', 'Courier New', monospace;
       display: flex;
       flex-direction: column;
       overflow: hidden;
@@ -849,6 +732,111 @@
     }
     .fc-dl:hover { background: rgba(0, 240, 255, 0.18); color: #ffffff; }
 
+    /* ── TACTICAL OPERATOR DECK (DESKTOP UI PARITY) ── */
+    .action-deck-wrap {
+      flex-shrink: 0;
+      padding: 6px 14px 4px;
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      z-index: 9;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+      box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.4);
+    }
+    .deck-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 8.5px;
+      font-weight: 800;
+      letter-spacing: 1.5px;
+      color: var(--muted);
+      text-transform: uppercase;
+      padding: 0 2px;
+    }
+    .deck-title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      color: var(--accent);
+    }
+    .deck-pulse {
+      display: inline-block;
+      animation: deck-pulse-anim 1.5s ease-in-out infinite alternate;
+    }
+    @keyframes deck-pulse-anim {
+      0% { opacity: 0.35; transform: scale(0.9); }
+      100% { opacity: 1; transform: scale(1.1); text-shadow: 0 0 8px var(--accent); }
+    }
+    .deck-status {
+      font-family: 'Cascadia Code', 'SF Mono', monospace;
+      color: var(--muted);
+      font-size: 8px;
+      letter-spacing: 0.5px;
+      max-width: 55%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .action-deck {
+      display: flex;
+      gap: 7px;
+      overflow-x: auto;
+      padding-bottom: 2px;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+    }
+    .action-deck::-webkit-scrollbar { display: none; }
+    .deck-btn {
+      flex: 0 0 auto;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 11px;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      color: var(--text);
+      font-family: 'Cascadia Code', 'SF Mono', Consolas, monospace;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: 0.8px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+      box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+    }
+    .deck-btn:hover {
+      border-color: var(--accent);
+      background: var(--adim);
+      color: #ffffff;
+      box-shadow: 0 0 12px var(--adim);
+    }
+    .deck-btn:active, .deck-btn.active {
+      transform: scale(0.94);
+      border-color: var(--accent);
+      background: var(--adim);
+      color: var(--accent);
+    }
+    .deck-btn-icon {
+      font-size: 13px;
+      line-height: 1;
+    }
+    .deck-btn-halt {
+      border-color: rgba(255, 42, 85, 0.35);
+      background: rgba(255, 42, 85, 0.08);
+      color: #ff5577;
+    }
+    .deck-btn-halt:hover, .deck-btn-halt.active {
+      border-color: #ff2a55;
+      background: rgba(255, 42, 85, 0.22);
+      color: #ffffff;
+      box-shadow: 0 0 14px rgba(255, 42, 85, 0.45);
+    }
+
     /* ── FOOTER DOCK ── */
     footer {
       flex-shrink: 0;
@@ -1161,14 +1149,14 @@
     </div>
     <div class="brand-wrap">
       <div class="logo"><em>A</em>LFRED</div>
-      <div class="sub-brand">WAYNE MARK-II</div>
+      <div class="sub-brand">WAYNE MARK-IV</div>
     </div>
     <div class="pill" id="pill"><span class="dot"></span><span id="st">CONNECTING</span></div>
     <div class="pill on tts-btn" id="tts-btn" onclick="toggleTTS()" title="Toggle Voice Readout on Uplink">
       <span class="tts-icon">🔊</span><span id="tts-st">TTS ON</span>
     </div>
-    <div class="pill theme-btn" id="theme-btn" onclick="toggleTheme()" title="Toggle Theme (Batcave / Batman Beyond)">
-      <span class="theme-icon" id="theme-icon">🦇</span><span id="theme-lbl">BATCAVE</span>
+    <div class="pill theme-btn" id="theme-btn" onclick="cycleTheme()" title="Switch CRT Theme (Dossier / Bane / Beyond / Wayne Gold)">
+      <span class="theme-icon" id="theme-icon">🦇</span><span id="theme-lbl">DOSSIER</span>
     </div>
     <div class="enc-badge" id="enc">AES-256</div>
     <div class="spacer"></div>
@@ -1190,7 +1178,7 @@
     <div class="feed-welcome" id="feed-welcome">
       <div class="welcome-badge">◈ UPLINK SYNCHRONIZED</div>
       <div class="welcome-title">ALFRED QUANTUM TERMINAL</div>
-      <div class="welcome-sub">WAYNE ENTERPRISES // MOBILE UPLINK ACTIVE [MK-II]</div>
+      <div class="welcome-sub">WAYNE ENTERPRISES // MOBILE UPLINK ACTIVE [MK-IV]</div>
       <div class="welcome-hints">
         <span>🔊 TTS Vocalizer Active</span>
         <span>•</span>
@@ -1218,6 +1206,44 @@
     </div>
   </div>
 
+  <!-- Tactical Operator Action Deck (Desktop UI Parity) -->
+  <div class="action-deck-wrap" id="action-deck-wrap">
+    <div class="deck-header">
+      <div class="deck-title"><span class="deck-pulse">◈</span> TACTICAL OPERATOR DECK</div>
+      <div class="deck-status" id="deck-status-txt">AUDIO CORE: STANDBY</div>
+    </div>
+    <div class="action-deck" id="action-deck">
+      <button class="deck-btn" id="btn-act-screenshot" onclick="executeTacticalAction('screenshot')" title="Trigger PC Desktop Screenshot">
+        <span class="deck-btn-icon">📸</span>
+        <span class="deck-btn-label">SCREENSHOT</span>
+      </button>
+      <button class="deck-btn" id="btn-act-audio-core" onclick="executeTacticalAction('audio_core')" title="Toggle TRON Audio Core Track">
+        <span class="deck-btn-icon">🎵</span>
+        <span class="deck-btn-label">AUDIO CORE</span>
+      </button>
+      <button class="deck-btn" id="btn-act-spotify" onclick="executeTacticalAction('spotify')" title="Toggle Spotify Playback">
+        <span class="deck-btn-icon">🎧</span>
+        <span class="deck-btn-label">SPOTIFY</span>
+      </button>
+      <button class="deck-btn" id="btn-act-system-status" onclick="executeTacticalAction('system_status')" title="Query PC Telemetry & Vitals">
+        <span class="deck-btn-icon">📊</span>
+        <span class="deck-btn-label">SYS STATUS</span>
+      </button>
+      <button class="deck-btn" id="btn-act-briefing" onclick="executeTacticalAction('briefing')" title="Deliver Daily Briefing">
+        <span class="deck-btn-icon">📋</span>
+        <span class="deck-btn-label">BRIEFING</span>
+      </button>
+      <button class="deck-btn deck-btn-halt" id="btn-act-interrupt" onclick="executeTacticalAction('interrupt')" title="Emergency Interrupt / Halt">
+        <span class="deck-btn-icon">🛑</span>
+        <span class="deck-btn-label">HALT</span>
+      </button>
+      <button class="deck-btn" id="btn-act-toggle-mute" onclick="executeTacticalAction('toggle_mute')" title="Toggle Speaker Mute">
+        <span class="deck-btn-icon" id="deck-mute-icon">🔇</span>
+        <span class="deck-btn-label" id="deck-mute-label">MUTE</span>
+      </button>
+    </div>
+  </div>
+
   <footer>
     <input id="inp" placeholder="Transmit directive to ALFRED…" autocomplete="off">
     <button class="btn-clear-chat" id="clear-chat-btn" onclick="doClearChat()" title="Wipe conversation">✕</button>
@@ -1231,48 +1257,65 @@
   <script>
     // ── THEME MANAGEMENT ENGINE ──────────────────────────────────────────────
     const SERVER_THEME_COLOR = "__THEME_COLOR__";
-    let activeTheme = 'batcave';
+    const THEMES = ['dossier', 'vector', 'beyond', 'wayne'];
+    const THEME_INFO = {
+      'dossier': { icon: '🦇', label: 'DOSSIER', name: 'DEFAULT BATCAVE', sub: 'WAYNE ENTERPRISES // MOBILE UPLINK ACTIVE [MK-IV]' },
+      'vector':  { icon: '☣️', label: 'BANE',    name: 'BANE VECTOR MODE', sub: 'SANTA PRISCA PROTOCOL // BANE VECTOR [MK-IV]' },
+      'beyond':  { icon: '⚡', label: 'BEYOND',  name: 'BATMAN BEYOND',    sub: 'WAYNE-POWERS // BATMAN BEYOND UPLINK [NEO-GOTHAM]' },
+      'wayne':   { icon: '⚜️', label: 'WAYNE',   name: 'WAYNE GOLD',       sub: 'WAYNE TOWER OVERRIDE // OBSIDIAN GOLD [MK-IV]' },
+    };
+    let activeTheme = 'dossier';
 
     function initTheme() {
       try {
         const saved = localStorage.getItem('alfred_mobile_theme');
-        if (saved === 'beyond' || saved === 'batcave') {
+        if (saved && THEMES.includes(saved)) {
           activeTheme = saved;
+        } else if (SERVER_THEME_COLOR === '#a8ff3e') {
+          activeTheme = 'vector';
         } else if (SERVER_THEME_COLOR === '#ff0037') {
           activeTheme = 'beyond';
+        } else if (SERVER_THEME_COLOR === '#e5a93b') {
+          activeTheme = 'wayne';
+        } else {
+          activeTheme = 'dossier';
         }
       } catch (_) {}
       applyTheme(activeTheme, false);
     }
 
     function applyTheme(name, notify = true) {
+      if (!THEMES.includes(name)) name = 'dossier';
       activeTheme = name;
-      const themeBtn = document.getElementById('theme-btn');
       const themeIcon = document.getElementById('theme-icon');
       const themeLbl = document.getElementById('theme-lbl');
       const welcomeSub = document.querySelector('.welcome-sub');
+      const info = THEME_INFO[name] || THEME_INFO['dossier'];
 
-      if (name === 'beyond') {
-        document.body.setAttribute('data-theme', 'beyond');
-        if (themeIcon) themeIcon.textContent = '⚡';
-        if (themeLbl) themeLbl.textContent = 'BEYOND';
-        if (welcomeSub) welcomeSub.textContent = 'WAYNE-POWERS // BATMAN BEYOND UPLINK [NEO-GOTHAM]';
-        if (notify) toast('Batman Beyond Theme Engaged');
-      } else {
+      if (name === 'dossier') {
         document.body.removeAttribute('data-theme');
-        if (themeIcon) themeIcon.textContent = '🦇';
-        if (themeLbl) themeLbl.textContent = 'BATCAVE';
-        if (welcomeSub) welcomeSub.textContent = 'WAYNE ENTERPRISES // MOBILE UPLINK ACTIVE [MK-II]';
-        if (notify) toast('Batcave Theme Engaged');
+      } else {
+        document.body.setAttribute('data-theme', name);
       }
+
+      if (themeIcon) themeIcon.textContent = info.icon;
+      if (themeLbl) themeLbl.textContent = info.label;
+      if (welcomeSub) welcomeSub.textContent = info.sub;
+      if (notify) toast(`${info.name} ENGAGED`);
 
       try { localStorage.setItem('alfred_mobile_theme', activeTheme); } catch (_) {}
       initBgParticles();
       initReactorParticles();
     }
 
+    function cycleTheme() {
+      const idx = THEMES.indexOf(activeTheme);
+      const nextTheme = THEMES[(idx + 1) % THEMES.length];
+      applyTheme(nextTheme, true);
+    }
+
     function toggleTheme() {
-      applyTheme(activeTheme === 'beyond' ? 'batcave' : 'beyond', true);
+      cycleTheme();
     }
 
     // ── BACKGROUND CYBER-PARTICLE ENGINE & AMBIENT FIELD ────────────────────
@@ -1290,8 +1333,12 @@
       const h = bgCanvas.height = window.innerHeight;
       bgParticles = [];
       const count = Math.floor(Math.min(70, (w * h) / 20000));
-      const isBeyond = (activeTheme === 'beyond');
       for (let i = 0; i < count; i++) {
+        let hColor = 'rgba(142, 155, 255,';
+        if (activeTheme === 'vector') hColor = 'rgba(168, 255, 62,';
+        else if (activeTheme === 'beyond') hColor = 'rgba(255, 0, 55,';
+        else if (activeTheme === 'wayne') hColor = 'rgba(229, 169, 59,';
+
         bgParticles.push({
           x: Math.random() * w,
           y: Math.random() * h,
@@ -1299,9 +1346,7 @@
           vy: (Math.random() - 0.5) * 0.40,
           size: Math.random() * 2.0 + 0.8,
           alpha: Math.random() * 0.5 + 0.2,
-          hue: isBeyond
-            ? (Math.random() > 0.35 ? 'rgba(255, 0, 55,' : 'rgba(0, 212, 255,')
-            : (Math.random() > 0.35 ? 'rgba(0, 240, 255,' : 'rgba(0, 136, 255,'),
+          hue: hColor,
         });
       }
     }
@@ -1341,8 +1386,6 @@
       currentTiltX += (targetTiltX - currentTiltX) * 0.05;
       currentTiltY += (targetTiltY - currentTiltY) * 0.05;
 
-      const isBeyond = (activeTheme === 'beyond');
-
       for (let i = 0; i < bgParticles.length; i++) {
         const p = bgParticles[i];
         p.x += p.vx + currentTiltX * 0.2;
@@ -1366,7 +1409,11 @@
           if (d2 < 6400) { // ~80px
             const dist = Math.sqrt(d2);
             const a = (1 - dist / 80) * 0.15;
-            bgCtx.strokeStyle = isBeyond ? `rgba(255, 0, 55, ${a})` : `rgba(0, 240, 255, ${a})`;
+            let strokeColor = 'rgba(142, 155, 255,';
+            if (activeTheme === 'vector') strokeColor = 'rgba(168, 255, 62,';
+            else if (activeTheme === 'beyond') strokeColor = 'rgba(255, 0, 55,';
+            else if (activeTheme === 'wayne') strokeColor = 'rgba(229, 169, 59,';
+            bgCtx.strokeStyle = strokeColor + a + ')';
             bgCtx.lineWidth = 0.8;
             bgCtx.beginPath();
             bgCtx.moveTo(p.x, p.y);
@@ -1827,18 +1874,59 @@
       return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     }
 
-    // ── Auth — bearer token ───────────────────────────────────────────────────
-    const _authToken  = sessionStorage.getItem('jarvis_token');
-    const _sessionKey = sessionStorage.getItem('jarvis_key');
+    // ── Auth & Persistent Pairing Engine ──────────────────────────────────────
+    let _authToken  = sessionStorage.getItem('jarvis_token') || localStorage.getItem('jarvis_token');
+    let _sessionKey = sessionStorage.getItem('jarvis_key') || localStorage.getItem('jarvis_key');
+    let _deviceToken = localStorage.getItem('jarvis_device_token');
 
-    if (!_authToken) {
+    // If both token and device_token are missing, redirect to login
+    if (!_authToken && !_deviceToken) {
       location.replace('/login');
     }
 
-    function _authHeader() { return { 'Authorization': `Bearer ${_authToken}` }; }
-    function _authFetch(url, opts = {}) {
+    function _authHeader() {
+      const devTok = localStorage.getItem('jarvis_device_token') || '';
+      const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+      return {
+        'Authorization': `Bearer ${curTok}`,
+        'X-Device-Token': devTok
+      };
+    }
+
+    async function _authFetch(url, opts = {}) {
       opts.headers = Object.assign({}, opts.headers, _authHeader());
-      return fetch(url, opts);
+      let res;
+      try {
+        res = await fetch(url, opts);
+      } catch (e) {
+        throw e;
+      }
+
+      if (res.status === 401) {
+        const devTok = localStorage.getItem('jarvis_device_token');
+        if (devTok) {
+          try {
+            const rec = await fetch('/api/device-login', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ device_token: devTok })
+            });
+            const d = await rec.json();
+            if (d.ok && d.token) {
+              _authToken = d.token;
+              _sessionKey = d.key;
+              sessionStorage.setItem('jarvis_token', d.token);
+              sessionStorage.setItem('jarvis_key', d.key);
+              localStorage.setItem('jarvis_token', d.token);
+              localStorage.setItem('jarvis_key', d.key);
+              _initCrypto(d.key);
+              opts.headers['Authorization'] = `Bearer ${d.token}`;
+              res = await fetch(url, opts);
+            }
+          } catch (_) {}
+        }
+      }
+      return res;
     }
 
     // ── AES-256-CBC encryption (CryptoJS) ────────────────────────────────────
@@ -1846,9 +1934,13 @@
     let _aesKey = null;
 
     function _initCrypto(key) {
-      if (typeof CryptoJS === 'undefined') return false;
-      _aesKey = CryptoJS.SHA256(key + _AES_SALT);
-      return true;
+      if (typeof CryptoJS === 'undefined' || !key) return false;
+      try {
+        _aesKey = CryptoJS.SHA256(key + _AES_SALT);
+        return true;
+      } catch (_) {
+        return false;
+      }
     }
 
     function _encrypt(plaintext) {
@@ -1869,179 +1961,181 @@
       } catch { return null; }
     }
 
-    const _encReady = _sessionKey ? _initCrypto(_sessionKey) : false;
-    const encBadge  = document.getElementById('enc');
-    if (_encReady) { encBadge.className = 'enc-badge on'; }
-    else           { encBadge.className = 'enc-badge off'; encBadge.textContent = 'NO ENC'; }
+    let _encReady = _sessionKey ? _initCrypto(_sessionKey) : false;
+    const encBadge = document.getElementById('enc');
+    if (_encReady && encBadge) { encBadge.className = 'enc-badge on'; }
+    else if (encBadge) { encBadge.className = 'enc-badge off'; encBadge.textContent = 'NO ENC'; }
 
-    // ── WebSocket ─────────────────────────────────────────────────────────────
+    // ── TACTICAL ACTION DECK CONTROLS ────────────────────────────────────────
+    async function executeTacticalAction(action, params = {}) {
+      const btn = document.getElementById(`btn-act-${action.replace(/_/g, '-')}`);
+      if (btn) btn.classList.add('active');
+      try {
+        const res = await _authFetch('/api/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action, params })
+        });
+        const data = await res.json();
+        if (data.ok) {
+          toast(`${action.toUpperCase().replace(/_/g, ' ')} OK`);
+          if (action === 'audio_core' || action === 'toggle_mute') {
+            setTimeout(updateDeckStatus, 300);
+          }
+        } else {
+          toast(`FAIL: ${data.error || 'ERROR'}`);
+        }
+      } catch (err) {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: 'action', action, params }));
+          toast(`TRANSMITTING ${action.toUpperCase()}`);
+        } else {
+          toast('LINK UNREACHABLE');
+        }
+      } finally {
+        setTimeout(() => { if (btn) btn.classList.remove('active'); }, 300);
+      }
+    }
+
+    async function updateDeckStatus() {
+      try {
+        const res = await _authFetch('/api/status');
+        const data = await res.json();
+        if (data.ok) {
+          const core = data.audio_core || {};
+          const statusTxt = document.getElementById('deck-status-txt');
+          if (statusTxt) {
+            if (core.is_playing) {
+              const stem = core.track_stem || 'TRON LEGACY';
+              statusTxt.textContent = `CORE: PLAYING [${stem.substring(0, 18)}]`;
+              statusTxt.style.color = 'var(--green)';
+            } else {
+              statusTxt.textContent = 'CORE: STANDBY / PAUSED';
+              statusTxt.style.color = 'var(--muted)';
+            }
+          }
+          const muteIcon = document.getElementById('deck-mute-icon');
+          const muteLbl = document.getElementById('deck-mute-label');
+          if (data.muted) {
+            if (muteIcon) muteIcon.textContent = '🔊';
+            if (muteLbl) muteLbl.textContent = 'UNMUTE';
+          } else {
+            if (muteIcon) muteIcon.textContent = '🔇';
+            if (muteLbl) muteLbl.textContent = 'MUTE';
+          }
+        }
+      } catch (_) {}
+    }
+
+    // ── AUTO-RECONNECTING WEBSOCKET ENGINE ────────────────────────────────────
     const feed  = document.getElementById('feed');
     const pill  = document.getElementById('pill');
     const stTxt = document.getElementById('st');
     const wake  = document.getElementById('wake');
     const rStatus = document.getElementById('reactor-status');
 
-    const _wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-    const _wsUrl   = `${_wsProto}://${location.host}/ws?token=${encodeURIComponent(_authToken)}`;
-    const ws       = new WebSocket(_wsUrl);
+    let ws = null;
+    let _wsReconnectTimer = null;
+    let _wsReconnectDelay = 1000;
+    let _pingInterval = null;
 
-    // ── MOBILE UPLINK TTS (SPEECH SYNTHESIS ENGINE) ───────────────────────────
-    let _ttsActive = true;
-    try {
-      const saved = localStorage.getItem('alfred_mobile_tts');
-      if (saved !== null) _ttsActive = (saved === 'true');
-    } catch (_) {}
-
-    let _speechUnlocked = false;
-    let _initialHistoryLoaded = false;
-    setTimeout(() => { _initialHistoryLoaded = true; }, 2200);
-
-    function _unlockSpeech() {
-      if (_speechUnlocked || !window.speechSynthesis) return;
-      try {
-        const u = new SpeechSynthesisUtterance(' ');
-        u.volume = 0.01;
-        u.rate = 10;
-        window.speechSynthesis.speak(u);
-        _speechUnlocked = true;
-      } catch (_) {}
-    }
-    window.addEventListener('click', _unlockSpeech, { once: true, passive: true });
-    window.addEventListener('touchstart', _unlockSpeech, { once: true, passive: true });
-
-    function getBestVoice() {
-      if (!window.speechSynthesis) return null;
-      const voices = window.speechSynthesis.getVoices();
-      if (!voices || voices.length === 0) return null;
-      const prefNames = ['Daniel', 'Arthur', 'Oliver', 'George', 'Fred', 'Tom', 'Gordon', 'Aaron'];
-      for (const name of prefNames) {
-        const found = voices.find(v => v.name && v.name.includes(name) && v.lang && v.lang.startsWith('en'));
-        if (found) return found;
+    function initWebSocket() {
+      if (ws) {
+        try { ws.close(); } catch (_) {}
+        ws = null;
       }
-      const ukVoice = voices.find(v => v.lang && (v.lang.startsWith('en-GB') || v.lang.startsWith('en_GB')));
-      if (ukVoice) return ukVoice;
-      const enVoice = voices.find(v => v.lang && v.lang.startsWith('en'));
-      return enVoice || voices[0] || null;
-    }
+      clearTimeout(_wsReconnectTimer);
+      clearInterval(_pingInterval);
 
-    if (typeof window !== 'undefined' && window.speechSynthesis && window.speechSynthesis.onvoiceschanged !== undefined) {
-      window.speechSynthesis.onvoiceschanged = () => { getBestVoice(); };
-    }
-
-    function cleanTextForSpeech(text) {
-      if (!text) return '';
-      return String(text)
-        .replace(/```[\s\S]*?```/g, 'Code block omitted.')
-        .replace(/`([^`]+)`/g, '$1')
-        .replace(/https?:\/\/\S+/g, 'link')
-        .replace(/[*_#~>[\]()|]/g, ' ')
-        .replace(/\s+/g, ' ')
-        .trim();
-    }
-
-    function speakOnMobile(text) {
-      if (!_ttsActive || !window.speechSynthesis) return;
-      const clean = cleanTextForSpeech(text);
-      if (!clean) return;
+      const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+      const devTok = localStorage.getItem('jarvis_device_token') || '';
+      const _wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
+      const _wsUrl = `${_wsProto}://${location.host}/ws?token=${encodeURIComponent(curTok)}&device_token=${encodeURIComponent(devTok)}`;
 
       try {
-        window.speechSynthesis.cancel();
-        const utt = new SpeechSynthesisUtterance(clean);
-        const v = getBestVoice();
-        if (v) utt.voice = v;
-        utt.rate = 1.02;
-        utt.pitch = 0.95;
-        utt.volume = 1.0;
-
-        const ttsBtn = document.getElementById('tts-btn');
-        utt.onstart = () => {
-          isSpeaking = true;
-          reactorAmp = 0.85;
-          if (ttsBtn) ttsBtn.classList.add('speaking');
-        };
-        utt.onend = () => {
-          isSpeaking = false;
-          reactorAmp = 0.0;
-          if (ttsBtn) ttsBtn.classList.remove('speaking');
-        };
-        utt.onerror = () => {
-          isSpeaking = false;
-          reactorAmp = 0.0;
-          if (ttsBtn) ttsBtn.classList.remove('speaking');
-        };
-
-        window.speechSynthesis.speak(utt);
-      } catch (err) {
-        console.warn('[Uplink TTS] Speech synthesis error:', err);
+        ws = new WebSocket(_wsUrl);
+      } catch (e) {
+        scheduleWsReconnect();
+        return;
       }
-    }
 
-    function toggleTTS() {
-      _ttsActive = !_ttsActive;
-      try { localStorage.setItem('alfred_mobile_tts', _ttsActive); } catch (_) {}
-      _updateTtsUI();
-      if (!_ttsActive && window.speechSynthesis) {
-        window.speechSynthesis.cancel();
-        toast('TTS Muted');
-      } else if (_ttsActive) {
-        toast('TTS Activated');
-        speakOnMobile('Voice synthesis uplink online.');
-      }
-    }
+      ws.onopen = () => {
+        _wsReconnectDelay = 1000;
+        setStatus('active');
+        sys('Quantum uplink operational.');
+        toast('Link Established');
+        _setupAudioWebSocket();
+        updateDeckStatus();
+        _pingInterval = setInterval(() => {
+          if (ws && ws.readyState === WebSocket.OPEN) {
+            ws.send(JSON.stringify({ type: 'ping' }));
+          }
+        }, 20000);
+      };
 
-    function _updateTtsUI() {
-      const btn = document.getElementById('tts-btn');
-      const txt = document.getElementById('tts-st');
-      if (!btn || !txt) return;
-      if (_ttsActive) {
-        btn.className = 'pill on tts-btn';
-        txt.textContent = 'TTS ON';
-      } else {
-        btn.className = 'pill tts-btn';
-        txt.textContent = 'TTS MUTE';
-      }
-    }
-    _updateTtsUI();
+      ws.onclose = () => {
+        clearInterval(_pingInterval);
+        setStatus('standby');
+        _cleanupAudio();
+        scheduleWsReconnect();
+      };
 
-    ws.onopen    = () => {
-    sys('Quantum link operational.');
-    toast('Link Established');
-    // Initialize audio WebSocket when main connection opens
-    _setupAudioWebSocket();
-};
-    ws.onclose   = () => {
-    sys('Link lost — refresh to reconnect.');
-    setStatus('sleeping');
-    // Close audio WebSocket when main connection closes
-    _cleanupAudio();
-};
-    ws.onerror   = () => sys('Link connection anomaly.');
-    ws.onmessage = (e) => {
-      try {
-        const m = JSON.parse(e.data);
-        const mType = (m.type || '').toLowerCase();
-        if (mType === 'clear_chat') {
-          clearChatFeed();
-        } else if (mType === 'log' || mType === 'chat' || mType === 'message') {
-          append(m.speaker || m.role || 'alfred', m.text || m.content || '');
-        } else if (mType === 'telemetry') {
-          appendTelemetry(m.tag, m.icon, m.text);
-        } else if (mType === 'status') {
-          setStatus(m.state);
-        } else if (mType === 'wake') {
-          sys('Wake signal acknowledged.');
-        } else if (mType === 'sys' || mType === 'system') {
-          sys(m.text || m.message || '');
-        } else if (mType === 'file_received') {
-          _onFileReceived(m);
-        } else if (m.text) {
-          append(m.speaker || 'sys', m.text);
+      ws.onerror = () => {
+        try { ws.close(); } catch (_) {}
+      };
+
+      ws.onmessage = (e) => {
+        try {
+          const m = JSON.parse(e.data);
+          const mType = (m.type || '').toLowerCase();
+          if (mType === 'pong') return;
+          if (mType === 'clear_chat') {
+            clearChatFeed();
+          } else if (mType === 'log' || mType === 'chat' || mType === 'message') {
+            append(m.speaker || m.role || 'alfred', m.text || m.content || '');
+          } else if (mType === 'telemetry') {
+            appendTelemetry(m.tag, m.icon, m.text);
+          } else if (mType === 'status') {
+            setStatus(m.state);
+          } else if (mType === 'wake') {
+            sys('Wake signal acknowledged.');
+          } else if (mType === 'sys' || mType === 'system') {
+            sys(m.text || m.message || '');
+          } else if (mType === 'file_received') {
+            _onFileReceived(m);
+          } else if (mType === 'action_result') {
+            toast(`ACTION ${m.action ? m.action.toUpperCase() : ''} COMPLETE`);
+            updateDeckStatus();
+          } else if (m.text) {
+            append(m.speaker || 'sys', m.text);
+          }
+        } catch (err) {
+          console.error('[Uplink WS] parse error:', err);
         }
-      } catch (err) {
-        console.error('[Uplink WS] parse error:', err);
-      }
-    };
+      };
+    }
 
+    function scheduleWsReconnect() {
+      clearTimeout(_wsReconnectTimer);
+      _wsReconnectTimer = setTimeout(() => {
+        _wsReconnectDelay = Math.min(_wsReconnectDelay * 1.5, 8000);
+        initWebSocket();
+      }, _wsReconnectDelay);
+    }
+
+    // Resume connection on phone wake / screen unlock / tab switch
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) {
+        if (!ws || ws.readyState === WebSocket.CLOSED || ws.readyState === WebSocket.CLOSING) {
+          initWebSocket();
+        } else {
+          updateDeckStatus();
+        }
+      }
+    });
+    window.addEventListener('online', () => {
+      initWebSocket();
+    });
     // ── Bidirectional Audio WebSocket ─────────────────────────────────────
     let _audioWs = null;
     let _audioCtx = null;
@@ -2054,8 +2148,10 @@
         _audioWs.close();
       }
 
+      const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+      const devTok = localStorage.getItem('jarvis_device_token') || '';
       const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
-      _audioWs = new WebSocket(`${wsProto}://${location.host}/ws/audio?token=${encodeURIComponent(_authToken)}`);
+      _audioWs = new WebSocket(`${wsProto}://${location.host}/ws/audio?token=${encodeURIComponent(curTok)}&device_token=${encodeURIComponent(devTok)}`);
       _audioWs.binaryType = 'arraybuffer';
 
       _audioWs.onopen = () => {
@@ -2177,9 +2273,11 @@
       if (ctx.state === 'suspended') await ctx.resume();
 
       // Phone audio WebSocket (existing)
+      const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+      const devTok = localStorage.getItem('jarvis_device_token') || '';
       const wsProto = location.protocol === 'https:' ? 'wss' : 'ws';
       const phoneWs = new WebSocket(
-        `${wsProto}://${location.host}/ws/phone-audio?token=${encodeURIComponent(_authToken)}`
+        `${wsProto}://${location.host}/ws/phone-audio?token=${encodeURIComponent(curTok)}&device_token=${encodeURIComponent(devTok)}`
       );
       phoneWs.binaryType = 'arraybuffer';
 
@@ -2406,7 +2504,9 @@
         if (xhr.status === 200) {
           let savedName = file.name;
           try { savedName = JSON.parse(xhr.responseText).name || file.name; } catch {}
-          const dlUrl = `/uploads/${encodeURIComponent(savedName)}?token=${encodeURIComponent(_authToken)}`;
+          const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+          const devTok = localStorage.getItem('jarvis_device_token') || '';
+          const dlUrl = `/uploads/${encodeURIComponent(savedName)}?token=${encodeURIComponent(curTok)}&device_token=${encodeURIComponent(devTok)}`;
           if (bar)  { bar.style.width = '100%'; bar.style.background = 'var(--green)'; }
           if (st)   { st.textContent = '✓'; st.className = 'fc-status done'; }
           if (lbl)  lbl.textContent = 'TRANSMISSION COMPLETE';
@@ -2435,7 +2535,9 @@
     }
 
     function _onFileReceived(m) {
-      const dlUrl = `/uploads/${encodeURIComponent(m.name)}?token=${encodeURIComponent(_authToken)}`;
+      const curTok = _authToken || localStorage.getItem('jarvis_token') || '';
+      const devTok = localStorage.getItem('jarvis_device_token') || '';
+      const dlUrl = `/uploads/${encodeURIComponent(m.name)}?token=${encodeURIComponent(curTok)}&device_token=${encodeURIComponent(devTok)}`;
       const card  = document.createElement('div');
       card.className = 'msg-file';
       const isImg = (m.name.match(/\.(png|jpe?g|webp|gif)$/i));

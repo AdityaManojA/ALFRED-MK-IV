@@ -242,8 +242,9 @@ def open_app(
     response=None,
     player=None,
     session_memory=None,
-) -> str:
-    app_name = (parameters or {}).get("app_name", "").strip()
+):
+    params = parameters or {}
+    app_name = str(params.get("app_name") or params.get("app") or params.get("name") or "").strip()
 
     if not app_name:
         return "No application name provided."

@@ -79,13 +79,24 @@ def _log(msg: str) -> None:
             pass
 
 
-def request(key: str, title: str, detail: str, run: Callable[[], str]) -> str:
+def request(
+    key: str,
+    title: str,
+    detail: str,
+    run: Optional[Callable[[], str]] = None,
+    *,
+    on_confirm: Optional[Callable[[], str]] = None,
+) -> str:
     """Park an irreversible action behind the on-screen gate.
 
     Returns the sentence the tool should hand back to the model — phrased as an
     instruction so the assistant asks the user out loud in their own language,
     rather than reading an English string verbatim."""
     global _pending
+
+    target_func = run if run is not None else on_confirm
+    if target_func is None:
+        raise ValueError("confirm.request requires a 'run' or 'on_confirm' callable.")
 
     if _show_cb is None:
         # No interface bound (headless, or a very early call). Refuse rather
@@ -95,7 +106,7 @@ def request(key: str, title: str, detail: str, run: Callable[[], str]) -> str:
 
     with _lock:
         _pending = _Pending(key=key, title=title, detail=detail,
-                            run=run, at=time.monotonic())
+                            run=target_func, at=time.monotonic())
 
     try:
         _show_cb(title, detail)

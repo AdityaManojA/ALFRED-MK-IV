@@ -2474,6 +2474,104 @@ class JarvisLive:
         self.ui.write_log("SYS: Phone connected via Remote Dashboard.")
         self.ui.notify_phone_connected()
 
+    async def _on_dashboard_action(self, action: str, params: dict) -> dict:
+        """Direct action execution from mobile dashboard buttons."""
+        action = (action or "").strip().lower()
+        self.ui.write_log(f"SYS: Mobile uplink action: [{action.upper()}]")
+        try:
+            if action == "screenshot":
+                from actions.computer_control import computer_control
+                res = await asyncio.to_thread(computer_control, {"action": "screenshot", "screenshot_mode": "both"}, player=self.ui)
+                return {"ok": True, "result": res}
+
+            elif action in ("audio_core", "audio_core_toggle", "audio_core_pause", "audio_core_play", "audio_core_volume", "audio_core_next", "audio_core_prev"):
+                sub = params.get("subaction")
+                if not sub:
+                    if "toggle" in action or action == "audio_core":
+                        sub = "toggle"
+                    elif "pause" in action:
+                        sub = "pause"
+                    elif "play" in action:
+                        sub = "resume"
+                    elif "next" in action:
+                        sub = "next"
+                    elif "prev" in action:
+                        sub = "prev"
+                    else:
+                        sub = "toggle"
+                vol = params.get("volume")
+                from actions.audio_core import audio_core
+                res = await asyncio.to_thread(audio_core, {"action": sub, "volume_percent": vol}, player=self.ui)
+                return {"ok": True, "result": res}
+
+            elif action in ("spotify", "spotify_toggle", "spotify_pause", "spotify_play", "spotify_next", "spotify_prev"):
+                sub = params.get("subaction")
+                if not sub:
+                    if "toggle" in action or action == "spotify":
+                        sub = "toggle"
+                    elif "pause" in action:
+                        sub = "pause"
+                    elif "play" in action:
+                        sub = "resume"
+                    elif "next" in action:
+                        sub = "skip_next"
+                    elif "prev" in action:
+                        sub = "skip_previous"
+                    else:
+                        sub = "toggle"
+                from actions.spotify_control import control_playback
+                res = await asyncio.to_thread(control_playback, sub, player=self.ui)
+                return {"ok": True, "result": res}
+
+            elif action == "briefing":
+                await self._dashboard._command_queue.put("deliver daily briefing")
+                return {"ok": True, "result": "Briefing queued"}
+
+            elif action == "system_status":
+                from actions.system_monitor import get_system_status
+                st = await asyncio.to_thread(get_system_status)
+                if self._dashboard:
+                    msg = (
+                        f"CPU: {st.get('cpu_percent', 0)}% | "
+                        f"RAM: {st.get('ram_used_gb', 0)}/{st.get('ram_total_gb', 0)} GB ({st.get('ram_percent', 0)}%) | "
+                        f"Disk: {st.get('disk_percent', 0)}%"
+                    )
+                    asyncio.create_task(self._dashboard.broadcast({
+                        "type": "telemetry",
+                        "tag": "SYSTEM",
+                        "icon": "status",
+                        "text": msg,
+                    }))
+                return {"ok": True, "status": st}
+
+            elif action == "interrupt":
+                self.interrupt()
+                if self._dashboard:
+                    asyncio.create_task(self._dashboard.broadcast({
+                        "type": "sys",
+                        "text": "Execution interrupted by mobile operator.",
+                    }))
+                return {"ok": True, "result": "Interrupted"}
+
+            elif action == "toggle_mute":
+                self.ui.toggle_mute()
+                return {"ok": True, "muted": self.ui.muted}
+
+            elif action == "get_deck_state":
+                core_st = self.ui.get_audio_core_status() if hasattr(self.ui, "get_audio_core_status") else {}
+                return {
+                    "ok": True,
+                    "audio_core": core_st,
+                    "muted": getattr(self.ui, "muted", False)
+                }
+
+            else:
+                res = await self._dispatch_tool(action, params)
+                return {"ok": True, "result": res}
+
+        except Exception as e:
+            return {"ok": False, "error": str(e)}
+
     # ── dashboard command relay ─────────────────────────────────────────────
 
     async def _process_dashboard_commands(self) -> None:
@@ -2484,39 +2582,38 @@ class JarvisLive:
                 )
                 if not text:
                     continue
-                # Wait up to 8s for session to become ready after a wake
+                # Wait up to 8s for session to become ready (or local mode queue ready)
                 for _ in range(80):
-                    if self.session:
+                    if self.session or (self._is_local_mode and self._local_msg_queue is not None):
                         break
                     await asyncio.sleep(0.1)
+
+                if self._wake_enabled and not self._awake:
+                    self.wake(reason="remote command")
+
                 if self.session:
-                    # A remote command is deliberate control and the phone user
-                    # has no desktop WAKE button — so it wakes JARVIS if asleep.
-                    if self._wake_enabled and not self._awake:
-                        self.wake(reason="remote command")
-                    if self.session:
-                        await self.session.send_client_content(
-                            turns={"role": "user", "parts": [{"text": text}]},
-                            turn_complete=True,
-                        )
-                        self.ui.write_log(f"[Web]: {text}")
-                        if self._dashboard:
-                            asyncio.create_task(self._dashboard.broadcast({
-                                "type": "log", "speaker": "user",
-                                "text": text,
-                                "ts": datetime.now().isoformat(),
-                            }))
-                    elif self._is_local_mode and self._local_msg_queue is not None:
-                        await self._local_msg_queue.put(text)
-                        self.ui.write_log(f"[Web]: {text}")
-                        if self._dashboard:
-                            asyncio.create_task(self._dashboard.broadcast({
-                                "type": "log", "speaker": "user",
-                                "text": text,
-                                "ts": datetime.now().isoformat(),
-                            }))
-                    else:
-                        print(f"[Dashboard] Dropped command (no session): {text}")
+                    await self.session.send_client_content(
+                        turns={"role": "user", "parts": [{"text": text}]},
+                        turn_complete=True,
+                    )
+                    self.ui.write_log(f"[Web]: {text}")
+                    if self._dashboard:
+                        asyncio.create_task(self._dashboard.broadcast({
+                            "type": "log", "speaker": "user",
+                            "text": text,
+                            "ts": datetime.now().isoformat(),
+                        }))
+                elif self._is_local_mode and self._local_msg_queue is not None:
+                    await self._local_msg_queue.put(text)
+                    self.ui.write_log(f"[Web]: {text}")
+                    if self._dashboard:
+                        asyncio.create_task(self._dashboard.broadcast({
+                            "type": "log", "speaker": "user",
+                            "text": text,
+                            "ts": datetime.now().isoformat(),
+                        }))
+                else:
+                    print(f"[Dashboard] Dropped command (no session): {text}")
             except asyncio.TimeoutError:
                 pass
             except Exception as e:
@@ -2553,11 +2650,13 @@ class JarvisLive:
                 self.ui.write_log("WRN: Ollama server unreachable. Ensure 'ollama serve' is running.")
             else:
                 self.ui.write_log(f"SYS: Ollama server connected at {url}.")
+        elif provider == "openrouter":
+            self.ui.write_log(f"SYS: OpenRouter frontier routing active ({model}).")
         else:
             self.ui.write_log(f"SYS: Local endpoint: {url} (model: {model}).")
 
         self.ui.set_state("LISTENING")
-        self.ui.write_log("SYS: ALFRED online in LOCAL mode. Ready for directives.")
+        self.ui.write_log(f"SYS: ALFRED online in [{provider.upper()}] mode. Ready for directives.")
 
         # Build tools declarations in OpenAI/Ollama compatible format
         system_instruction, _all_decls = self._build_system_instruction()
@@ -2665,6 +2764,12 @@ class JarvisLive:
 
                 if full_reply:
                     history.append({"role": "assistant", "content": full_reply})
+                    if self._dashboard:
+                        asyncio.create_task(self._dashboard.broadcast({
+                            "type": "chat", "speaker": "alfred",
+                            "text": full_reply,
+                            "ts": datetime.now().isoformat(),
+                        }))
 
                 # Execute any tool calls requested by local model
                 if final_tool_calls:
@@ -2700,6 +2805,12 @@ class JarvisLive:
                                 if not self.ui.muted:
                                     self._speak_local(synth)
                                 history.append({"role": "assistant", "content": synth})
+                                if self._dashboard:
+                                    asyncio.create_task(self._dashboard.broadcast({
+                                        "type": "chat", "speaker": "alfred",
+                                        "text": synth,
+                                        "ts": datetime.now().isoformat(),
+                                    }))
                         except Exception as e:
                             _tlog("ALFRED", "warn", f"Synthesis error: {e}", self._dashboard)
 
@@ -2737,6 +2848,7 @@ class JarvisLive:
             self._dashboard._loop = self._loop
             self._dashboard.set_connect_callback(self._on_phone_connected)
             self._dashboard.set_clear_chat_callback(self._on_remote_clear_chat)
+            self._dashboard.set_action_callback(self._on_dashboard_action)
             asyncio.create_task(self._dashboard.serve())
             asyncio.create_task(self._process_dashboard_commands())
         except Exception as e:
@@ -2754,7 +2866,7 @@ class JarvisLive:
         except Exception:
             pass
 
-        if provider in ("ollama", "openai", "lmstudio", "local"):
+        if provider in ("ollama", "openai", "lmstudio", "local", "openrouter"):
             self._is_local_mode = True
             await self.run_local(provider)
             return
@@ -2929,7 +3041,7 @@ class JarvisLive:
                     try:
                         cfg = json.loads(open(API_CONFIG_PATH, "r", encoding="utf-8").read())
                         new_prov = str(cfg.get("llm_provider", "gemini")).strip().lower()
-                        if new_prov in ("ollama", "openai", "lmstudio", "local"):
+                        if new_prov in ("ollama", "openai", "lmstudio", "local", "openrouter"):
                             self._is_local_mode = True
                             await self.run_local(new_prov)
                             return
